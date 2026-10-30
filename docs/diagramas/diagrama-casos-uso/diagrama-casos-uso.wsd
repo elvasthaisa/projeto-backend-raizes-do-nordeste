@@ -1,0 +1,71 @@
+@startuml diagrama-casos-uso
+  left to right direction
+
+  actor Cliente
+  actor Atendente
+  actor Cozinha
+  actor Gerente
+  actor Admin
+  actor "Sistemas Externos de Pagamento (Gateway)" as Gateway 
+
+  rectangle "Sistema Raízes do Nordeste" {
+    usecase "Fazer Pedido (UC1)" as UC1
+    usecase "Consultar Status do Pedido (UC2)" as UC2
+    usecase "Solicitar Pagamento (UC3)" as UC3
+    usecase "Cancelar Pedido (UC4)" as UC4
+    usecase "Marcar Pedido como Pronto (UC5)" as UC5
+    usecase "Confirmar Retirada (UC6)" as UC6
+    usecase "Ativar/Desativar Produto na Unidade (UC7)" as UC7
+    usecase "Ativar/Desativar Produto do Catálogo (UC8)" as UC8
+    usecase "Organizar Campanhas de Marketing (UC9)" as UC9 <<planejado>>
+    usecase "Liberar Desconto (UC10)" as UC10 <<planejado>>
+    usecase "Gerar Relatórios Consolidados (UC11)" as UC11 <<planejado>>
+    usecase "Login (UC12)" as UC12
+  }
+
+  Cliente --> UC1
+  Cliente --> UC2
+  Cliente --> UC3
+  Cliente --> UC4
+  Cliente --> UC6
+  Atendente --> UC1
+  Atendente --> UC2
+  Atendente --> UC3
+  Atendente --> UC4
+  Atendente --> UC6
+  Atendente --> UC10
+  Cozinha --> UC2
+  Cozinha --> UC5
+  Gerente --> UC2
+  Gerente --> UC4
+  Gerente --> UC7
+  Gerente --> UC9
+  Gerente --> UC10
+  Admin --> UC2
+  Admin --> UC8
+  Admin --> UC11
+
+  UC12 .> UC1 : <<extend>>
+  UC12 .> UC3 : <<extend>>
+  UC2 .> UC12 : <<include>>
+  UC4 .> UC12 : <<include>>
+  UC5 .> UC12 : <<include>>
+  UC6 .> UC12 : <<include>>
+  UC7 .> UC12 : <<include>>
+  UC8 .> UC12 : <<include>>
+
+  UC3 -- Gateway
+
+  note right of UC3
+    O sistema deve se integrar com sistemas externos de pagamento
+    (Gateway) para processar pagamentos.
+    No balcão, o atendente solicita e o cliente paga.
+  end note
+  note right of UC10
+    Atendente aplica o desconto com autorização do gerente.
+  end note
+  legend right
+    «planejado»: documentado, fora do MVP
+  end legend
+
+  @enduml 
