@@ -53,6 +53,7 @@
   UC6 .> UC12 : <<include>>
   UC7 .> UC12 : <<include>>
   UC8 .> UC12 : <<include>>
+  UC1 .> UC3 : <<include>>
 
   UC3 -- Gateway
 
