@@ -27,7 +27,8 @@ sequenceDiagram
         alt aprovado
             PagSvc->>BD: registrarResposta(APROVADO)
             PagSvc->>PedSvc: mudar status para EM_PREPARO
-            PedSvc->>BD: atualiza status + histórico
+            PedSvc->>BD: atualiza status + histórico + senha
+            Note over PedSvc,BD: senha gerada na mesma transação <br>(maior senha do dia na unidade + 1)
         else recusado
             PagSvc->>BD: registrarResposta(RECUSADO)
             PagSvc->>PedSvc: mudar status para PAGAMENTO_RECUSADO
