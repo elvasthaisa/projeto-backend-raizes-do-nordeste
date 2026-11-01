@@ -19,15 +19,15 @@ UNIDADES = {
 }
 
 # Produto do cardápio de Recife usado nos exemplos
-PRODUTO_CUSCUZ_RECIFE = UUID("7c9e6679-7425-40de-944b-e07fc1f90ae7")
+PRODUTO_CUSCUZ_RECIFE = UUID("b0000000-0000-4000-8000-000000000001")
 
 # Cardápio por unidade: só produtos ativos, na temporada e com estoque; preço de cada unidade
 CARDAPIOS = {
     UNIDADE_RECIFE: [
         {"id": PRODUTO_CUSCUZ_RECIFE, "nome": "Cuscuz com charque", "descricao": "Cuscuz de milho com charque acebolada", "categoria": "PRATO_PRINCIPAL", "preco": Decimal("15.00")},
-        {"id": UUID("8d0f7780-8536-41ef-a55c-f18ad2e01bf8"), "nome": "Tapioca de queijo coalho", "descricao": None, "categoria": "LANCHE", "preco": Decimal("12.00")},
-        {"id": UUID("9e1a8891-9647-42f0-b66d-0a9be3f12c09"), "nome": "Suco de caju", "descricao": "Copo de 400 ml", "categoria": "BEBIDA", "preco": Decimal("8.00")},
-        {"id": UUID("af2b99a2-a758-4301-877e-1bacf4023d1a"), "nome": "Cartola", "descricao": "Banana, queijo coalho, açúcar e canela", "categoria": "SOBREMESA", "preco": Decimal("10.00")},
+        {"id": UUID("b0000000-0000-4000-8000-000000000002"), "nome": "Tapioca de queijo coalho", "descricao": None, "categoria": "LANCHE", "preco": Decimal("12.00")},
+        {"id": UUID("b0000000-0000-4000-8000-000000000003"), "nome": "Suco de caju", "descricao": "Copo de 400 ml", "categoria": "BEBIDA", "preco": Decimal("8.00")},
+        {"id": UUID("b0000000-0000-4000-8000-000000000004"), "nome": "Cartola", "descricao": "Banana, queijo coalho, açúcar e canela", "categoria": "SOBREMESA", "preco": Decimal("10.00")},
         {"id": UUID("b0000000-0000-4000-8000-000000000005"), "nome": "Bolo de rolo", "descricao": "Fatia, com recheio de goiabada", "categoria": "SOBREMESA", "preco": Decimal("9.00")},
         {"id": UUID("b0000000-0000-4000-8000-000000000006"), "nome": "Bolo de noiva", "descricao": "Fatia, bolo de ameixa com vinho moscatel e frutas cristalizadas, com cobertura de açúcar", "categoria": "SOBREMESA", "preco": Decimal("11.00")},
     ],

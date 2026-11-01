@@ -9,7 +9,7 @@ from core.enums import CanalPedido, CenarioMock, StatusPedido
 
 # Ids de Recife usados nos exemplos do Swagger (os mesmos de repositories/dados_exemplo.py)
 UNIDADE_RECIFE = "3f2b8c1e-1a2b-4c3d-8e9f-0a1b2c3d4e5f"
-PRODUTO_CUSCUZ_RECIFE = "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+PRODUTO_CUSCUZ_RECIFE = "b0000000-0000-4000-8000-000000000001"
 
 
 # Request do POST /pedidos
