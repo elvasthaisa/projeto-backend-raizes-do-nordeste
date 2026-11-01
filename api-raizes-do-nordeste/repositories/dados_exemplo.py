@@ -1,9 +1,12 @@
-# Dados fictícios até existir o banco. Sai na Etapa 5, quando o seed estiver pronto.
+# Dados fictícios até existir o banco. Só os repositories leem daqui.
 
+from datetime import datetime, timezone
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import bcrypt
+
+from core.enums import CanalPedido, ResultadoPagamento, StatusPedido
 
 UNIDADE_RECIFE = UUID("3f2b8c1e-1a2b-4c3d-8e9f-0a1b2c3d4e5f")
 UNIDADE_SAO_PAULO = UUID("4a3c9d2f-2b3c-4d4e-9f0a-1b2c3d4e5f60")
@@ -15,7 +18,7 @@ UNIDADES = {
     UNIDADE_FORTALEZA: {"nome": "Fortaleza", "endereco": "Av. Beira Mar, 2000", "cidade": "Fortaleza", "uf": "CE"},
 }
 
-# Produto do cardápio de Recife usado nos exemplos do Swagger
+# Produto do cardápio de Recife usado nos exemplos
 PRODUTO_CUSCUZ_RECIFE = UUID("7c9e6679-7425-40de-944b-e07fc1f90ae7")
 
 # Cardápio por unidade: só produtos ativos, na temporada e com estoque; preço de cada unidade
@@ -69,8 +72,30 @@ for usuario in USUARIOS:
     usuario["ativo"] = True
 
 
-def buscar_usuario_por_email(email: str):
-    for usuario in USUARIOS:
-        if usuario["email"] == email.lower():
-            return usuario
-    return None
+# Pedido fictício: o status é escolhido por quem chama, para cada rota simular o caso de sucesso
+def pedido_exemplo(pedido_id: UUID, status: StatusPedido = StatusPedido.EM_PREPARO) -> dict:
+    return {
+        "id": pedido_id,
+        "status": status,
+        "canalPedido": CanalPedido.APP,
+        "unidade": {"id": UNIDADE_RECIFE, "nome": UNIDADES[UNIDADE_RECIFE]["nome"]},
+        "dataHora": datetime.now(timezone.utc),
+        "itens": [
+            {"produtoUnidadeId": PRODUTO_CUSCUZ_RECIFE, "nomeProduto": "Cuscuz com charque", "precoUnitario": Decimal("15.00"), "quantidade": 2},
+            {"produtoUnidadeId": uuid4(), "nomeProduto": "Suco de caju", "precoUnitario": Decimal("8.00"), "quantidade": 1},
+        ],
+        "total": Decimal("38.00"),
+        "senha": 42 if status in (StatusPedido.EM_PREPARO, StatusPedido.PRONTO, StatusPedido.ENTREGUE) else None,
+    }
+
+# Tentativas fictícias: uma recusada
+def pagamentos_exemplo() -> list:
+    return [
+        {
+            "id": uuid4(),
+            "valor": Decimal("38.00"),
+            "resultado": ResultadoPagamento.RECUSADO,
+            "motivoRecusa": "Pagamento recusado pela operadora.",
+            "dataHoraResposta": datetime.now(timezone.utc),
+        }
+    ]
