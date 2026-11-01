@@ -2,7 +2,9 @@ from typing import Annotated, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, Query
+from sqlalchemy.orm import Session
 
+from core.database import get_db
 from core.enums import CanalPedido, Perfil, StatusPedido
 from core.erros import ErroResponse
 from core.seguranca import exigir_perfis, usuario_atual
@@ -30,8 +32,9 @@ router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
 def registrar_pedido(
     pedido: Annotated[PedidoRequest, Body(openapi_examples=EXEMPLOS_PEDIDO)],
     usuario: Annotated[UsuarioLogado, Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE, Perfil.TOTEM))],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    return pedido_service.registrar_pedido(pedido, usuario)
+    return pedido_service.registrar_pedido(db, pedido, usuario)
 
 @router.get(
     "",

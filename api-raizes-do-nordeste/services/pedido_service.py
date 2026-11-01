@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
+from sqlalchemy.orm import Session
+
 from core.enums import CanalPedido, Perfil, StatusPedido
 from core.erros import DetalheErro, ErroApi
 from repositories import pedido_repository, unidade_repository
@@ -30,7 +32,7 @@ def validar_transicao_pedido(pedido: dict, status_permitidos, acao: str):
         raise ErroApi(409, "TRANSICAO_INVALIDA", f"Não é possível {acao}: o pedido está em {pedido['status'].value}.")
 
 
-def registrar_pedido(dados: PedidoRequest, usuario: UsuarioLogado) -> dict:
+def registrar_pedido(db: Session, dados: PedidoRequest, usuario: UsuarioLogado) -> dict:
     if dados.canalPedido not in CANAIS_POR_PERFIL[usuario.perfil]:
         raise ErroApi(403, "CANAL_NAO_PERMITIDO", f"O perfil {usuario.perfil.value} não pode criar pedidos no canal {dados.canalPedido.value}.")
 
@@ -44,22 +46,22 @@ def registrar_pedido(dados: PedidoRequest, usuario: UsuarioLogado) -> dict:
             raise ErroApi(403, "ACESSO_NEGADO", "A unidade informada é diferente da unidade da conta.")
         unidade_id = usuario.unidadeId
 
-    unidade = unidade_repository.buscar_por_id(unidade_id)
+    unidade = unidade_repository.buscar_por_uuid(db, unidade_id)
     if unidade is None:
         raise ErroApi(404, "NAO_ENCONTRADO", "Unidade não encontrada.", [DetalheErro(field="unidadeId", issue="não existe")])
 
     # Cada item precisa estar no cardápio da unidade do pedido; nome e preço vêm do cardápio
-    cardapio = {produto["id"]: produto for produto in unidade_repository.listar_cardapio(unidade_id)}
+    cardapio = {produto_unidade.uuid: produto_unidade for produto_unidade in unidade_repository.listar_cardapio(db, unidade.id)}
     itens = []
     for posicao, item in enumerate(dados.itens):
-        produto = cardapio.get(item.produtoUnidadeId)
-        if produto is None:
+        produto_unidade = cardapio.get(item.produtoUnidadeId)
+        if produto_unidade is None:
             raise ErroApi(404, "NAO_ENCONTRADO", "Produto não encontrado no cardápio desta unidade.",
                           [DetalheErro(field=f"itens.{posicao}.produtoUnidadeId", issue="não existe nesta unidade")])
         itens.append({
             "produtoUnidadeId": item.produtoUnidadeId,
-            "nomeProduto": produto["nome"],
-            "precoUnitario": produto["preco"],
+            "nomeProduto": produto_unidade.produto.nome,
+            "precoUnitario": produto_unidade.preco,
             "quantidade": item.quantidade,
             "observacao": item.observacao,
         })
@@ -69,7 +71,7 @@ def registrar_pedido(dados: PedidoRequest, usuario: UsuarioLogado) -> dict:
         "id": uuid4(),
         "status": StatusPedido.AGUARDANDO_PAGAMENTO,
         "canalPedido": dados.canalPedido,
-        "unidade": {"id": unidade_id, "nome": unidade["nome"]},
+        "unidade": {"id": unidade.uuid, "nome": unidade.nome},
         "dataHora": datetime.now(timezone.utc),
         "itens": itens,
         "total": sum(item["precoUnitario"] * item["quantidade"] for item in itens),

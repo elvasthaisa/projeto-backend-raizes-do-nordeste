@@ -94,7 +94,7 @@ CARDAPIOS = [
     ("fortaleza", "empada_frango", "b2000000-0000-4000-8000-000000000013", "6.00"),
 ]
 
-# Itens cadastrados que não aparecem no cardápio agora (regra da D23)
+# Itens cadastrados que não aparecem no cardápio agora (inativos ou fora da temporada)
 FORA_DA_TEMPORADA = {("saopaulo", "curau"), ("saopaulo", "pamonha")} # em São Paulo, só no São João
 DESATIVADOS_PELO_GERENTE = {("recife", "cocada")}
 

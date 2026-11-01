@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from core.enums import CanalPedido, CenarioMock, StatusPedido
 
-# Ids de Recife usados nos exemplos do Swagger (os mesmos de repositories/dados_exemplo.py)
+# Ids de Recife usados nos exemplos do Swagger (os mesmos do seed.py)
 UNIDADE_RECIFE = "3f2b8c1e-1a2b-4c3d-8e9f-0a1b2c3d4e5f"
 PRODUTO_CUSCUZ_RECIFE = "b0000000-0000-4000-8000-000000000001"
 
