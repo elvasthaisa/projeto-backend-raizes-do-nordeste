@@ -28,3 +28,12 @@ def listar_cardapio(db: Session, unidade_id: int):
     )
     return db.scalars(consulta).all()
 
+# Produtos da unidade com os uuids pedidos, mesmo os que estão fora do cardápio
+def buscar_produtos_da_unidade(db: Session, unidade_id: int, uuids: list):
+    consulta = (
+        select(ProdutoUnidade)
+        .join(ProdutoUnidade.produto)
+        .options(contains_eager(ProdutoUnidade.produto))
+        .where(ProdutoUnidade.unidade_id == unidade_id, ProdutoUnidade.uuid.in_(uuids))
+    )
+    return db.scalars(consulta).all()

@@ -50,14 +50,20 @@ def registrar_pedido(db: Session, dados: PedidoRequest, usuario: UsuarioLogado) 
     if unidade is None:
         raise ErroApi(404, "NAO_ENCONTRADO", "Unidade não encontrada.", [DetalheErro(field="unidadeId", issue="não existe")])
 
-    # Cada item precisa estar no cardápio da unidade do pedido; nome e preço vêm do cardápio
-    cardapio = {produto_unidade.uuid: produto_unidade for produto_unidade in unidade_repository.listar_cardapio(db, unidade.id)}
+    # Cada item precisa ser um produto da unidade do pedido e estar disponível; nome e preço vêm do cardápio
+    uuids_pedidos = [item.produtoUnidadeId for item in dados.itens]
+    produtos = {produto_unidade.uuid: produto_unidade for produto_unidade in unidade_repository.buscar_produtos_da_unidade(db, unidade.id, uuids_pedidos)}
     itens = []
     for posicao, item in enumerate(dados.itens):
-        produto_unidade = cardapio.get(item.produtoUnidadeId)
+        campo = f"itens.{posicao}.produtoUnidadeId"
+        produto_unidade = produtos.get(item.produtoUnidadeId)
         if produto_unidade is None:
             raise ErroApi(404, "NAO_ENCONTRADO", "Produto não encontrado no cardápio desta unidade.",
-                          [DetalheErro(field=f"itens.{posicao}.produtoUnidadeId", issue="não existe nesta unidade")])
+                          [DetalheErro(field=campo, issue="não existe nesta unidade")])
+        # Existe na unidade, mas foi desativado pelo gerente ou está fora da temporada
+        if not produto_unidade.ativo or not produto_unidade.disponivel_sazonal:
+            raise ErroApi(409, "PRODUTO_INDISPONIVEL", f"{produto_unidade.produto.nome} está indisponível nesta unidade no momento.",
+                          [DetalheErro(field=campo, issue="indisponível no momento")])
         itens.append({
             "produtoUnidadeId": item.produtoUnidadeId,
             "nomeProduto": produto_unidade.produto.nome,
