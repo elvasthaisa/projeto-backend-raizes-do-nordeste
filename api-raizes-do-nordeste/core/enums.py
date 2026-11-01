@@ -37,6 +37,16 @@ class ResultadoPagamento(str, Enum):
     RECUSADO = "RECUSADO"
     EXPIRADO = "EXPIRADO"
 
+# Quem fez a mudança de status: um perfil ou o próprio sistema (transições automáticas).
+# Sem TOTEM: o pedido anônimo do totem é registrado como CLIENTE, sem usuário
+class TipoResponsavel(str, Enum):
+    CLIENTE = "CLIENTE"
+    ATENDENTE = "ATENDENTE"
+    COZINHA = "COZINHA"
+    GERENTE = "GERENTE"
+    ADMIN = "ADMIN"
+    SISTEMA = "SISTEMA"
+
 class Categoria(str, Enum):
     PRATO_PRINCIPAL = "PRATO_PRINCIPAL"
     LANCHE = "LANCHE"
