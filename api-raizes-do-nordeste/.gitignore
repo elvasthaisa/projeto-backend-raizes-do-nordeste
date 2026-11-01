@@ -1,0 +1,7 @@
+# Ambiente virtual e cache do Python
+.venv/
+__pycache__/
+*.pyc
+
+# Variáveis de ambiente (segredos); o .env.example entra no repositório
+.env
