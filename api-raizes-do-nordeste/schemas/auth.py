@@ -21,7 +21,7 @@ class UsuarioLogado(BaseModel):
     unidadeId: Optional[UUID] = None
 
 
-# Exemplos do Swagger (usuários de repositories/dados_exemplo.py)
+# Exemplos do Swagger (usuários do seed.py)
 EXEMPLOS_LOGIN = {
     "cliente": {"summary": "Cliente", "value": {"email": "cliente@raizes.com", "senha": "senha123"}},
     "admin": {"summary": "Admin", "value": {"email": "admin@raizes.com", "senha": "senha123"}},

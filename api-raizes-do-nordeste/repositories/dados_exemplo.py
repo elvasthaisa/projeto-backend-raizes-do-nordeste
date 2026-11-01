@@ -1,45 +1,14 @@
-# Usuários, pedidos e pagamentos fictícios, até essas rotas usarem o banco. Só os repositories leem daqui.
+# Pedidos e pagamentos fictícios, até essas rotas usarem o banco. Só os repositories leem daqui.
 
 from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-import bcrypt
-
 from core.enums import CanalPedido, ResultadoPagamento, StatusPedido
 
+# Ids de Recife do seed.py
 UNIDADE_RECIFE = UUID("3f2b8c1e-1a2b-4c3d-8e9f-0a1b2c3d4e5f")
-UNIDADE_SAO_PAULO = UUID("4a3c9d2f-2b3c-4d4e-9f0a-1b2c3d4e5f60")
-UNIDADE_FORTALEZA = UUID("5b4d0e3a-3c4d-4e5f-a01b-2c3d4e5f6071")
-
-# Produto do cardápio de Recife usado nos exemplos
 PRODUTO_CUSCUZ_RECIFE = UUID("b0000000-0000-4000-8000-000000000001")
-
-# Mesma senha para todos ("senha123"), só para desenvolvimento
-SENHA_HASH = bcrypt.hashpw(b"senha123", bcrypt.gensalt()).decode()
-
-USUARIOS = [
-    {"id": UUID("a1b2c3d4-0001-4000-8000-000000000001"), "nome": "Maria Cliente", "email": "cliente@raizes.com", "perfil": "CLIENTE", "unidadeId": None},
-    {"id": UUID("a1b2c3d4-0002-4000-8000-000000000002"), "nome": "Admin", "email": "admin@raizes.com", "perfil": "ADMIN", "unidadeId": None},
-
-    {"id": UUID("a1b2c3d4-0003-4000-8000-000000000003"), "nome": "João Atendente", "email": "atendente.recife@raizes.com", "perfil": "ATENDENTE", "unidadeId": UNIDADE_RECIFE},
-    {"id": UUID("a1b2c3d4-0004-4000-8000-000000000004"), "nome": "Ana Cozinha", "email": "cozinha.recife@raizes.com", "perfil": "COZINHA", "unidadeId": UNIDADE_RECIFE},
-    {"id": UUID("a1b2c3d4-0005-4000-8000-000000000005"), "nome": "Carlos Gerente", "email": "gerente.recife@raizes.com", "perfil": "GERENTE", "unidadeId": UNIDADE_RECIFE},
-    {"id": UUID("a1b2c3d4-0006-4000-8000-000000000006"), "nome": "Totem Recife 1", "email": "totem.recife@raizes.com", "perfil": "TOTEM", "unidadeId": UNIDADE_RECIFE},
-
-    {"id": UUID("a1b2c3d4-0007-4000-8000-000000000007"), "nome": "Paula Atendente", "email": "atendente.saopaulo@raizes.com", "perfil": "ATENDENTE", "unidadeId": UNIDADE_SAO_PAULO},
-    {"id": UUID("a1b2c3d4-0008-4000-8000-000000000008"), "nome": "Rafael Cozinha", "email": "cozinha.saopaulo@raizes.com", "perfil": "COZINHA", "unidadeId": UNIDADE_SAO_PAULO},
-    {"id": UUID("a1b2c3d4-0009-4000-8000-000000000009"), "nome": "Beatriz Gerente", "email": "gerente.saopaulo@raizes.com", "perfil": "GERENTE", "unidadeId": UNIDADE_SAO_PAULO},
-    {"id": UUID("a1b2c3d4-0010-4000-8000-000000000010"), "nome": "Totem São Paulo 1", "email": "totem.saopaulo@raizes.com", "perfil": "TOTEM", "unidadeId": UNIDADE_SAO_PAULO},
-
-    {"id": UUID("a1b2c3d4-0011-4000-8000-000000000011"), "nome": "Francisco Atendente", "email": "atendente.fortaleza@raizes.com", "perfil": "ATENDENTE", "unidadeId": UNIDADE_FORTALEZA},
-    {"id": UUID("a1b2c3d4-0012-4000-8000-000000000012"), "nome": "Luiza Cozinha", "email": "cozinha.fortaleza@raizes.com", "perfil": "COZINHA", "unidadeId": UNIDADE_FORTALEZA},
-    {"id": UUID("a1b2c3d4-0013-4000-8000-000000000013"), "nome": "Antônio Gerente", "email": "gerente.fortaleza@raizes.com", "perfil": "GERENTE", "unidadeId": UNIDADE_FORTALEZA},
-    {"id": UUID("a1b2c3d4-0014-4000-8000-000000000014"), "nome": "Totem Fortaleza 1", "email": "totem.fortaleza@raizes.com", "perfil": "TOTEM", "unidadeId": UNIDADE_FORTALEZA},
-]
-for usuario in USUARIOS:
-    usuario["senhaHash"] = SENHA_HASH
-    usuario["ativo"] = True
 
 
 # Pedido fictício: o status é escolhido por quem chama, para cada rota simular o caso de sucesso

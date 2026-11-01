@@ -1,5 +1,9 @@
-from fastapi import APIRouter
+from typing import Annotated
 
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from core.database import get_db
 from core.erros import ErroResponse
 from schemas.usuario import CadastroClienteRequest, UsuarioResponse
 from services import usuario_service
@@ -18,5 +22,5 @@ router = APIRouter(prefix="/usuarios", tags=["Usuários"])
         422: {"model": ErroResponse, "description": "VALIDACAO"},
     },
 )
-def cadastrar_cliente(dados: CadastroClienteRequest):
-    return usuario_service.cadastrar_cliente(dados)
+def cadastrar_cliente(dados: CadastroClienteRequest, db: Annotated[Session, Depends(get_db)]):
+    return usuario_service.cadastrar_cliente(db, dados)

@@ -1,11 +1,11 @@
-from repositories.dados_exemplo import USUARIOS
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from models import Usuario
 
 
-def buscar_por_email(email: str):
-    for usuario in USUARIOS:
-        if usuario["email"] == email.lower():
-            return usuario
-    return None
+def buscar_por_email(db: Session, email: str):
+    return db.scalar(select(Usuario).where(Usuario.email == email.lower()))
 
-def adicionar(usuario: dict):
-    USUARIOS.append(usuario) # Próxima etapa: gravar no banco
+def adicionar(db: Session, usuario: Usuario):
+    db.add(usuario)

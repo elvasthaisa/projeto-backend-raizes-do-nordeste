@@ -10,17 +10,19 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from core.config import JWT_SECRET
 from core.enums import Perfil
 from core.erros import ErroApi
+from models import Usuario
 from schemas.auth import UsuarioLogado
 
 ALGORITMO = "HS256"
 MINUTOS_VALIDADE = 60
 
 
-def criar_token(usuario: dict) -> str:
+# O token leva os uuids, nunca o id numérico
+def criar_token(usuario: Usuario) -> str:
     payload = {
-        "sub": str(usuario["id"]),
-        "perfil": usuario["perfil"],
-        "unidadeId": str(usuario["unidadeId"]) if usuario["unidadeId"] else None,
+        "sub": str(usuario.uuid),
+        "perfil": usuario.perfil.value,
+        "unidadeId": str(usuario.unidade.uuid) if usuario.unidade else None,
         "exp": datetime.now(timezone.utc) + timedelta(minutes=MINUTOS_VALIDADE),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=ALGORITMO)
