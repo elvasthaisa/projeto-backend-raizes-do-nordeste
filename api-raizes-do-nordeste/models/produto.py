@@ -42,3 +42,9 @@ class ProdutoUnidade(Base):
 
     produto: Mapped["Produto"] = relationship()
     unidade: Mapped["Unidade"] = relationship()
+
+    def reservar_estoque(self, quantidade: int) -> bool:
+        if quantidade > self.estoque:
+            return False
+        self.estoque -= quantidade
+        return True

@@ -1,12 +1,12 @@
-from datetime import datetime, timezone
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from core.enums import CanalPedido, Perfil, StatusPedido
+from core.enums import CanalPedido, Perfil, ResultadoPagamento, StatusPedido, TipoResponsavel
 from core.erros import DetalheErro, ErroApi
-from repositories import pedido_repository, unidade_repository
+from models import HistoricoStatusPedido, ItemPedido, Pagamento, Pedido
+from repositories import pedido_repository, unidade_repository, usuario_repository
 from schemas.auth import UsuarioLogado
 from schemas.pedido import PedidoRequest
 
@@ -32,6 +32,28 @@ def validar_transicao_pedido(pedido: dict, status_permitidos, acao: str):
         raise ErroApi(409, "TRANSICAO_INVALIDA", f"Não é possível {acao}: o pedido está em {pedido['status'].value}.")
 
 
+def pedido_para_resposta(pedido: Pedido) -> dict:
+    return {
+        "id": pedido.uuid,
+        "status": pedido.status,
+        "canalPedido": pedido.canal_pedido,
+        "unidade": {"id": pedido.unidade.uuid, "nome": pedido.unidade.nome},
+        "dataHora": pedido.data_hora,
+        "itens": [
+            {
+                "produtoUnidadeId": item.produto_unidade.uuid,
+                "nomeProduto": item.nome_produto,
+                "precoUnitario": item.preco_unitario,
+                "quantidade": item.quantidade,
+                "observacao": item.observacao,
+            }
+            for item in pedido.itens
+        ],
+        "total": pedido.calcular_total(),
+        "senha": pedido.senha,
+    }
+
+
 def registrar_pedido(db: Session, dados: PedidoRequest, usuario: UsuarioLogado) -> dict:
     if dados.canalPedido not in CANAIS_POR_PERFIL[usuario.perfil]:
         raise ErroApi(403, "CANAL_NAO_PERMITIDO", f"O perfil {usuario.perfil.value} não pode criar pedidos no canal {dados.canalPedido.value}.")
@@ -50,10 +72,9 @@ def registrar_pedido(db: Session, dados: PedidoRequest, usuario: UsuarioLogado) 
     if unidade is None:
         raise ErroApi(404, "NAO_ENCONTRADO", "Unidade não encontrada.", [DetalheErro(field="unidadeId", issue="não existe")])
 
-    # Cada item precisa ser um produto da unidade do pedido e estar disponível; nome e preço vêm do cardápio
+    # Cada item precisa ser um produto da unidade do pedido, estar disponível e ter estoque
     uuids_pedidos = [item.produtoUnidadeId for item in dados.itens]
     produtos = {produto_unidade.uuid: produto_unidade for produto_unidade in unidade_repository.buscar_produtos_da_unidade(db, unidade.id, uuids_pedidos)}
-    itens = []
     for posicao, item in enumerate(dados.itens):
         campo = f"itens.{posicao}.produtoUnidadeId"
         produto_unidade = produtos.get(item.produtoUnidadeId)
@@ -64,25 +85,49 @@ def registrar_pedido(db: Session, dados: PedidoRequest, usuario: UsuarioLogado) 
         if not produto_unidade.ativo or not produto_unidade.disponivel_sazonal:
             raise ErroApi(409, "PRODUTO_INDISPONIVEL", f"{produto_unidade.produto.nome} está indisponível nesta unidade no momento.",
                           [DetalheErro(field=campo, issue="indisponível no momento")])
-        itens.append({
-            "produtoUnidadeId": item.produtoUnidadeId,
-            "nomeProduto": produto_unidade.produto.nome,
-            "precoUnitario": produto_unidade.preco,
-            "quantidade": item.quantidade,
-            "observacao": item.observacao,
-        })
+        if not produto_unidade.reservar_estoque(item.quantidade):
+            raise ErroApi(409, "ESTOQUE_INSUFICIENTE", f"Estoque insuficiente de {produto_unidade.produto.nome} nesta unidade.",
+                          [DetalheErro(field=f"itens.{posicao}.quantidade", issue="maior que o estoque disponível")])
 
-    # Próxima etapa: gravar o pedido, reservar o estoque e criar a 1ª tentativa de pagamento
-    return {
-        "id": uuid4(),
-        "status": StatusPedido.AGUARDANDO_PAGAMENTO,
-        "canalPedido": dados.canalPedido,
-        "unidade": {"id": unidade.uuid, "nome": unidade.nome},
-        "dataHora": datetime.now(timezone.utc),
-        "itens": itens,
-        "total": sum(item["precoUnitario"] * item["quantidade"] for item in itens),
-        "senha": None,
-    }
+    # Mesmo produto com a mesma observação vira uma linha só. Nome e preço são copiados do cardápio
+    linhas = {}
+    for item in dados.itens:
+        observacao = (item.observacao or "").strip() or None
+        chave = (item.produtoUnidadeId, observacao)
+        if chave in linhas:
+            linhas[chave].quantidade += item.quantidade
+        else:
+            produto_unidade = produtos[item.produtoUnidadeId]
+            linhas[chave] = ItemPedido(
+                produto_unidade=produto_unidade,
+                nome_produto=produto_unidade.produto.nome,
+                preco_unitario=produto_unidade.preco,
+                quantidade=item.quantidade,
+                observacao=observacao,
+            )
+
+    # No balcão e no totem anônimo o pedido fica sem cliente.
+    # No histórico, o totem anônimo é registrado como CLIENTE, sem usuário
+    conta = usuario_repository.buscar_por_uuid(db, usuario.id)
+    if usuario.perfil == Perfil.TOTEM:
+        tipo_responsavel, responsavel = TipoResponsavel.CLIENTE, None
+    else:
+        tipo_responsavel, responsavel = TipoResponsavel(usuario.perfil.value), conta
+
+    pedido = Pedido(
+        canal_pedido=dados.canalPedido,
+        status=StatusPedido.AGUARDANDO_PAGAMENTO,
+        unidade=unidade,
+        cliente=conta if usuario.perfil == Perfil.CLIENTE else None,
+        itens=list(linhas.values()),
+    )
+    # A 1ª tentativa de pagamento e a 1ª linha do histórico são gravadas junto com o pedido, na mesma transação
+    pedido.pagamentos.append(Pagamento(valor=pedido.calcular_total(), resultado=ResultadoPagamento.PENDENTE))
+    pedido.historico.append(HistoricoStatusPedido(status_novo=StatusPedido.AGUARDANDO_PAGAMENTO, tipo_responsavel=tipo_responsavel, usuario=responsavel))
+
+    pedido_repository.adicionar(db, pedido)
+    db.commit()
+    return pedido_para_resposta(pedido)
 
 
 def listar_pedidos(canal: Optional[CanalPedido], status: Optional[StatusPedido], page: int, limit: int) -> dict:

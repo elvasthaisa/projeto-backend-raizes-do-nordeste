@@ -27,9 +27,12 @@ class Pedido(Base):
 
     unidade: Mapped["Unidade"] = relationship()
     cliente: Mapped[Optional["Usuario"]] = relationship()
-    itens: Mapped[List["ItemPedido"]] = relationship()
-    pagamentos: Mapped[List["Pagamento"]] = relationship()
-    historico: Mapped[List["HistoricoStatusPedido"]] = relationship()
+    itens: Mapped[List["ItemPedido"]] = relationship(order_by="ItemPedido.id")
+    pagamentos: Mapped[List["Pagamento"]] = relationship(order_by="Pagamento.id")
+    historico: Mapped[List["HistoricoStatusPedido"]] = relationship(order_by="HistoricoStatusPedido.id")
+
+    def calcular_total(self) -> Decimal:
+        return sum((item.calcular_subtotal() for item in self.itens), Decimal("0.00"))
 
 
 # Uma linha do pedido. Nome e preço são cópias do cardápio no momento da compra
@@ -47,6 +50,9 @@ class ItemPedido(Base):
     produto_unidade_id: Mapped[int] = mapped_column(ForeignKey("produto_unidade.id", ondelete="RESTRICT"))
 
     produto_unidade: Mapped["ProdutoUnidade"] = relationship()
+
+    def calcular_subtotal(self) -> Decimal:
+        return self.preco_unitario * self.quantidade
 
 
 # Uma linha por mudança de status. As linhas nunca são alteradas

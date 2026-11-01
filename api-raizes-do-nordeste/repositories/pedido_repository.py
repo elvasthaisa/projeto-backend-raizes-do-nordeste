@@ -1,8 +1,15 @@
 from typing import Optional
 from uuid import UUID, uuid4
 
+from sqlalchemy.orm import Session
+
 from core.enums import CanalPedido, StatusPedido
+from models import Pedido
 from repositories.dados_exemplo import pedido_exemplo
+
+
+def adicionar(db: Session, pedido: Pedido):
+    db.add(pedido)
 
 
 def buscar_por_id(pedido_id: UUID, status_exemplo: StatusPedido = StatusPedido.EM_PREPARO):
