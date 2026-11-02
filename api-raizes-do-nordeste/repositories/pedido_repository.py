@@ -13,8 +13,12 @@ def adicionar(db: Session, pedido: Pedido):
     db.add(pedido)
 
 
-def buscar_por_uuid(db: Session, pedido_uuid: UUID):
-    return db.scalar(select(Pedido).where(Pedido.uuid == pedido_uuid))
+# Com travar=True, o pedido fica travado até o fim da transação, para duas mudanças de status não acontecerem ao mesmo tempo
+def buscar_por_uuid(db: Session, pedido_uuid: UUID, travar: bool = False):
+    consulta = select(Pedido).where(Pedido.uuid == pedido_uuid)
+    if travar:
+        consulta = consulta.with_for_update()
+    return db.scalar(consulta)
 
 
 # Do pedido mais recente para o mais antigo
@@ -41,6 +45,6 @@ def listar(db: Session, canal: Optional[CanalPedido], status: Optional[StatusPed
     return pedidos, total
 
 
-# Pedido fictício das rotas que ainda não usam o banco (pronto, retirada, cancelamento e nova tentativa)
+# Pedido fictício das rotas que ainda não usam o banco (pronto, retirada e nova tentativa)
 def buscar_por_id(pedido_id: UUID, status_exemplo: StatusPedido = StatusPedido.EM_PREPARO):
     return pedido_exemplo(pedido_id, status_exemplo)

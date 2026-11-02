@@ -31,7 +31,7 @@ def nova_tentativa(pedido_id: UUID, cenario: CenarioMock) -> dict:
     tentativas = pagamento_repository.listar_por_pedido(pedido_id)
 
     # Só pedido recusado ou expirado pode tentar de novo, até 3 tentativas (UC3 FA3)
-    validar_transicao_pedido(pedido, (StatusPedido.PAGAMENTO_RECUSADO, StatusPedido.PAGAMENTO_EXPIRADO), "pedir nova tentativa de pagamento")
+    validar_transicao_pedido(pedido["status"], (StatusPedido.PAGAMENTO_RECUSADO, StatusPedido.PAGAMENTO_EXPIRADO), "pedir nova tentativa de pagamento")
     if len(tentativas) >= 3:
         raise ErroApi(409, "LIMITE_TENTATIVAS", "O pedido já atingiu o limite de 3 tentativas de pagamento.")
 

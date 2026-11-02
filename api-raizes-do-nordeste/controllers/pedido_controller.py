@@ -139,7 +139,6 @@ def confirmar_retirada(id: UUID, usuario: Annotated[UsuarioLogado, Depends(exigi
     "/{id}/cancelamento",
     summary="Cancelar pedido",
     response_model=PedidoResponse,
-    dependencies=[Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE, Perfil.GERENTE))],
     responses={
         401: {"model": ErroResponse, "description": "NAO_AUTENTICADO"},
         403: {"model": ErroResponse, "description": "ACESSO_NEGADO"},
@@ -148,5 +147,10 @@ def confirmar_retirada(id: UUID, usuario: Annotated[UsuarioLogado, Depends(exigi
         422: {"model": ErroResponse, "description": "VALIDACAO (motivo ausente)"},
     },
 )
-def cancelar_pedido(id: UUID, cancelamento: CancelamentoRequest):
-    return pedido_service.cancelar_pedido(id, cancelamento.motivo)
+def cancelar_pedido(
+    id: UUID,
+    cancelamento: CancelamentoRequest,
+    usuario: Annotated[UsuarioLogado, Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE, Perfil.GERENTE))],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return pedido_service.cancelar_pedido(db, id, cancelamento.motivo, usuario)

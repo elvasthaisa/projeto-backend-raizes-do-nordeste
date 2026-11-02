@@ -27,9 +27,9 @@ CANAIS_DA_RETIRADA = {
 STATUS_CANCELAVEIS = (StatusPedido.AGUARDANDO_PAGAMENTO, StatusPedido.PAGAMENTO_RECUSADO, StatusPedido.PAGAMENTO_EXPIRADO)
 
 
-def validar_transicao_pedido(pedido: dict, status_permitidos, acao: str):
-    if pedido["status"] not in status_permitidos:
-        raise ErroApi(409, "TRANSICAO_INVALIDA", f"Não é possível {acao}: o pedido está em {pedido['status'].value}.")
+def validar_transicao_pedido(status_atual: StatusPedido, status_permitidos, acao: str):
+    if status_atual not in status_permitidos:
+        raise ErroApi(409, "TRANSICAO_INVALIDA", f"Não é possível {acao}: o pedido está em {status_atual.value}.")
 
 
 def pedido_para_resposta(pedido: Pedido) -> dict:
@@ -144,8 +144,8 @@ def listar_pedidos(db: Session, usuario: UsuarioLogado, canal: Optional[CanalPed
 
 # Busca o pedido e confere se quem pede pode vê-lo: o cliente dono do pedido, os funcionários da unidade,
 # o totem da unidade (só pedidos feitos no totem) e o admin
-def buscar_pedido(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> Pedido:
-    pedido = pedido_repository.buscar_por_uuid(db, pedido_uuid)
+def buscar_pedido(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado, travar: bool = False) -> Pedido:
+    pedido = pedido_repository.buscar_por_uuid(db, pedido_uuid, travar)
     if pedido is None:
         raise ErroApi(404, "NAO_ENCONTRADO", "Pedido não encontrado.")
 
@@ -170,7 +170,7 @@ def consultar_pedido(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> 
 
 def marcar_pronto(pedido_id: UUID) -> dict:
     pedido = pedido_repository.buscar_por_id(pedido_id, StatusPedido.EM_PREPARO)
-    validar_transicao_pedido(pedido, (StatusPedido.EM_PREPARO,), "marcar como pronto")
+    validar_transicao_pedido(pedido["status"], (StatusPedido.EM_PREPARO,), "marcar como pronto")
     pedido["status"] = StatusPedido.PRONTO
     return pedido
 
@@ -179,14 +179,28 @@ def confirmar_retirada(pedido_id: UUID, usuario: UsuarioLogado) -> dict:
     pedido = pedido_repository.buscar_por_id(pedido_id, StatusPedido.PRONTO)
     if pedido["canalPedido"] not in CANAIS_DA_RETIRADA[usuario.perfil]:
         raise ErroApi(403, "ACESSO_NEGADO", f"A retirada de pedidos do canal {pedido['canalPedido'].value} não é confirmada pelo perfil {usuario.perfil.value}.")
-    validar_transicao_pedido(pedido, (StatusPedido.PRONTO,), "confirmar a retirada")
+    validar_transicao_pedido(pedido["status"], (StatusPedido.PRONTO,), "confirmar a retirada")
     pedido["status"] = StatusPedido.ENTREGUE
     return pedido
 
 
-def cancelar_pedido(pedido_id: UUID, motivo: str) -> dict:
-    # Próxima etapa: o motivo vai para o histórico e o estoque reservado é devolvido
-    pedido = pedido_repository.buscar_por_id(pedido_id, StatusPedido.AGUARDANDO_PAGAMENTO)
-    validar_transicao_pedido(pedido, STATUS_CANCELAVEIS, "cancelar")
-    pedido["status"] = StatusPedido.PEDIDO_CANCELADO
-    return pedido
+def cancelar_pedido(db: Session, pedido_uuid: UUID, motivo: str, usuario: UsuarioLogado) -> dict:
+    pedido = buscar_pedido(db, pedido_uuid, usuario, travar=True)
+    validar_transicao_pedido(pedido.status, STATUS_CANCELAVEIS, "cancelar")
+
+    # O estoque reservado na criação do pedido volta para a venda
+    unidade_repository.travar_produtos(db, [item.produto_unidade_id for item in pedido.itens])
+    for item in pedido.itens:
+        item.produto_unidade.devolver_estoque(item.quantidade)
+
+    # O novo status e a linha do histórico são gravados na mesma transação
+    pedido.historico.append(HistoricoStatusPedido(
+        status_anterior=pedido.status,
+        status_novo=StatusPedido.PEDIDO_CANCELADO,
+        tipo_responsavel=TipoResponsavel(usuario.perfil.value),
+        usuario=usuario_repository.buscar_por_uuid(db, usuario.id),
+        motivo=motivo,
+    ))
+    pedido.status = StatusPedido.PEDIDO_CANCELADO
+    db.commit()
+    return pedido_para_resposta(pedido)

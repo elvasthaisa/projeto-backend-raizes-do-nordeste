@@ -48,3 +48,6 @@ class ProdutoUnidade(Base):
             return False
         self.estoque -= quantidade
         return True
+
+    def devolver_estoque(self, quantidade: int):
+        self.estoque += quantidade

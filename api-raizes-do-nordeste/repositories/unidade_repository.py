@@ -40,3 +40,14 @@ def buscar_produtos_da_unidade(db: Session, unidade_id: int, uuids: list):
         .with_for_update(of=ProdutoUnidade)
     )
     return db.scalars(consulta).all()
+
+# Trava os produtos e relê o estoque do banco, para a devolução não desfazer uma reserva feita ao mesmo tempo
+def travar_produtos(db: Session, produto_unidade_ids: list):
+    consulta = (
+        select(ProdutoUnidade)
+        .where(ProdutoUnidade.id.in_(produto_unidade_ids))
+        .order_by(ProdutoUnidade.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    return db.scalars(consulta).all()
