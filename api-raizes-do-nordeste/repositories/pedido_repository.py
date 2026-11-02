@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Optional
 from uuid import UUID
 
@@ -43,6 +44,12 @@ def listar(db: Session, canal: Optional[CanalPedido], status: Optional[StatusPed
         .limit(limit)
     ).all()
     return pedidos, total
+
+
+# Zero quando a unidade ainda não deu nenhuma senha no dia
+def maior_senha_do_dia(db: Session, unidade_id: int, dia: date) -> int:
+    consulta = select(func.coalesce(func.max(Pedido.senha), 0)).where(Pedido.unidade_id == unidade_id, Pedido.data_senha == dia)
+    return db.scalar(consulta)
 
 
 # Pedido fictício das rotas que ainda não usam o banco (pronto, retirada e nova tentativa)

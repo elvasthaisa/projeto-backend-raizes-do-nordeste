@@ -1,11 +1,13 @@
+from datetime import date
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from core.enums import CanalPedido, Perfil, ResultadoPagamento, StatusPedido, TipoResponsavel
 from core.erros import DetalheErro, ErroApi
-from models import HistoricoStatusPedido, ItemPedido, Pagamento, Pedido
+from models import HistoricoStatusPedido, ItemPedido, Pagamento, Pedido, Usuario
 from repositories import pedido_repository, unidade_repository, usuario_repository
 from schemas.auth import UsuarioLogado
 from schemas.pedido import PedidoRequest
@@ -30,6 +32,19 @@ STATUS_CANCELAVEIS = (StatusPedido.AGUARDANDO_PAGAMENTO, StatusPedido.PAGAMENTO_
 def validar_transicao_pedido(status_atual: StatusPedido, status_permitidos, acao: str):
     if status_atual not in status_permitidos:
         raise ErroApi(409, "TRANSICAO_INVALIDA", f"Não é possível {acao}: o pedido está em {status_atual.value}.")
+
+
+# Toda mudança de status grava também uma linha no histórico, na mesma transação
+def mudar_status(pedido: Pedido, novo_status: StatusPedido, tipo_responsavel: TipoResponsavel,
+                 usuario: Optional[Usuario] = None, motivo: Optional[str] = None):
+    pedido.historico.append(HistoricoStatusPedido(
+        status_anterior=pedido.status,
+        status_novo=novo_status,
+        tipo_responsavel=tipo_responsavel,
+        usuario=usuario,
+        motivo=motivo,
+    ))
+    pedido.status = novo_status
 
 
 def pedido_para_resposta(pedido: Pedido) -> dict:
@@ -193,14 +208,23 @@ def cancelar_pedido(db: Session, pedido_uuid: UUID, motivo: str, usuario: Usuari
     for item in pedido.itens:
         item.produto_unidade.devolver_estoque(item.quantidade)
 
-    # O novo status e a linha do histórico são gravados na mesma transação
-    pedido.historico.append(HistoricoStatusPedido(
-        status_anterior=pedido.status,
-        status_novo=StatusPedido.PEDIDO_CANCELADO,
-        tipo_responsavel=TipoResponsavel(usuario.perfil.value),
-        usuario=usuario_repository.buscar_por_uuid(db, usuario.id),
-        motivo=motivo,
-    ))
-    pedido.status = StatusPedido.PEDIDO_CANCELADO
+    responsavel = usuario_repository.buscar_por_uuid(db, usuario.id)
+    mudar_status(pedido, StatusPedido.PEDIDO_CANCELADO, TipoResponsavel(usuario.perfil.value), responsavel, motivo)
     db.commit()
     return pedido_para_resposta(pedido)
+
+
+# Pagamento aprovado: o pedido vai para o preparo já com a senha de retirada.
+# A senha é a maior do dia na unidade + 1. Se outra aprovação gravar o mesmo número antes,
+# a restrição única do banco recusa e o número é calculado de novo
+def enviar_para_preparo(db: Session, pedido: Pedido):
+    hoje = date.today()
+    while True:
+        try:
+            with db.begin_nested():
+                pedido.senha = pedido_repository.maior_senha_do_dia(db, pedido.unidade_id, hoje) + 1
+                pedido.data_senha = hoje
+            break
+        except IntegrityError:
+            continue
+    mudar_status(pedido, StatusPedido.EM_PREPARO, TipoResponsavel.SISTEMA)

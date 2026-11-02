@@ -1,7 +1,7 @@
 from typing import Annotated, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.database import get_db
@@ -32,9 +32,14 @@ router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
 def registrar_pedido(
     pedido: Annotated[PedidoRequest, Body(openapi_examples=EXEMPLOS_PEDIDO)],
     usuario: Annotated[UsuarioLogado, Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE, Perfil.TOTEM))],
-    db: Annotated[Session, Depends(get_db)],
+    # A sessão fecha ao fim da rota, sem esperar o pagamento em segundo plano, para não prender uma conexão do banco
+    db: Annotated[Session, Depends(get_db, scope="function")],
+    tarefas: BackgroundTasks,
 ):
-    return pedido_service.registrar_pedido(db, pedido, usuario)
+    resposta = pedido_service.registrar_pedido(db, pedido, usuario)
+    # O gateway é chamado depois da resposta 201, em segundo plano
+    tarefas.add_task(pagamento_service.processar_pagamento, resposta["id"], resposta["total"], pedido.cenarioMock)
+    return resposta
 
 @router.get(
     "",

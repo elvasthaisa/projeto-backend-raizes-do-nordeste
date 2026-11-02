@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID, uuid4
@@ -22,3 +22,8 @@ class Pagamento(Base):
     data_hora_resposta: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True)) # vazia enquanto PENDENTE
 
     pedido_id: Mapped[int] = mapped_column(ForeignKey("pedido.id", ondelete="RESTRICT"))
+
+    def registrar_resposta(self, resultado: ResultadoPagamento, motivo_recusa: Optional[str] = None):
+        self.resultado = resultado
+        self.motivo_recusa = motivo_recusa
+        self.data_hora_resposta = datetime.now(timezone.utc)
