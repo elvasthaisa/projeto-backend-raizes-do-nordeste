@@ -189,6 +189,22 @@ def consultar_pedido(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> 
     return pedido_para_resposta(buscar_pedido(db, pedido_uuid, usuario))
 
 
+# Mesmas regras de acesso do GET /pedidos/{id}, mas o controller já barra o totem
+def listar_historico(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> list:
+    pedido = buscar_pedido(db, pedido_uuid, usuario)
+    return [
+        {
+            "statusAnterior": linha.status_anterior,
+            "statusNovo": linha.status_novo,
+            "dataHora": linha.data_hora,
+            "tipoResponsavel": linha.tipo_responsavel,
+            "nomeResponsavel": linha.usuario.nome if linha.usuario else None,
+            "motivo": linha.motivo,
+        }
+        for linha in pedido.historico
+    ]
+
+
 # Mudanças de status. O pedido fica travado até o commit, para duas mudanças não acontecerem ao mesmo tempo
 
 def marcar_pronto(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> dict:

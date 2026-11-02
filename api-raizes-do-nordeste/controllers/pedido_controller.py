@@ -10,7 +10,7 @@ from core.erros import ErroResponse
 from core.seguranca import exigir_perfis, usuario_atual
 from schemas.auth import UsuarioLogado
 from schemas.pagamento import EXEMPLOS_TENTATIVA, NovaTentativaRequest, PagamentoResponse
-from schemas.pedido import EXEMPLOS_PEDIDO, CancelamentoRequest, PaginaPedidos, PedidoRequest, PedidoResponse
+from schemas.pedido import EXEMPLOS_PEDIDO, CancelamentoRequest, HistoricoResponse, PaginaPedidos, PedidoRequest, PedidoResponse
 from services import pagamento_service, pedido_service
 
 router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
@@ -88,6 +88,25 @@ def consultar_pedido(id: UUID, usuario: Annotated[UsuarioLogado, Depends(usuario
 )
 def listar_pagamentos(id: UUID, usuario: Annotated[UsuarioLogado, Depends(usuario_atual)], db: Annotated[Session, Depends(get_db)]):
     return pagamento_service.listar_pagamentos(db, id, usuario)
+
+@router.get(
+    "/{id}/historico",
+    summary="Listar o histórico de status do pedido",
+    response_model=List[HistoricoResponse],
+    responses={
+        401: {"model": ErroResponse, "description": "NAO_AUTENTICADO"},
+        403: {"model": ErroResponse, "description": "ACESSO_NEGADO (perfil TOTEM, pedido de outro cliente ou de outra unidade)"},
+        404: {"model": ErroResponse, "description": "NAO_ENCONTRADO"},
+        422: {"model": ErroResponse, "description": "VALIDACAO (id não é um uuid)"},
+    },
+)
+def listar_historico(
+    id: UUID,
+    # O totem é um aparelho compartilhado. Sem esta trava, o próximo cliente veria o histórico do pedido anterior
+    usuario: Annotated[UsuarioLogado, Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE, Perfil.COZINHA, Perfil.GERENTE, Perfil.ADMIN))],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return pedido_service.listar_historico(db, id, usuario)
 
 @router.post(
     "/{id}/pagamentos",

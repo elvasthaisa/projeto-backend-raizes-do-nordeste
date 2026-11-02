@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from core.enums import CanalPedido, CenarioMock, StatusPedido
+from core.enums import CanalPedido, CenarioMock, StatusPedido, TipoResponsavel
 
 # Ids de Recife usados nos exemplos do Swagger (os mesmos do seed.py)
 UNIDADE_RECIFE = "3f2b8c1e-1a2b-4c3d-8e9f-0a1b2c3d4e5f"
@@ -82,6 +82,26 @@ class PaginaPedidos(BaseModel):
     page: int
     limit: int
     total: int # total de pedidos encontrados com os filtros
+
+
+# Histórico de status (auditoria)
+
+class HistoricoResponse(BaseModel):
+    statusAnterior: Optional[StatusPedido] = None # vazio na criação do pedido
+    statusNovo: StatusPedido
+    dataHora: datetime
+    tipoResponsavel: TipoResponsavel
+    nomeResponsavel: Optional[str] = None # vazio quando foi o SISTEMA ou o cliente anônimo do totem
+    motivo: Optional[str] = None
+
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "statusAnterior": "PAGAMENTO_RECUSADO",
+        "statusNovo": "PEDIDO_CANCELADO",
+        "dataHora": "2026-10-31T14:32:10Z",
+        "tipoResponsavel": "CLIENTE",
+        "nomeResponsavel": "Maria Cliente",
+        "motivo": "Desisti do pedido.",
+    }]})
 
 
 # Cancelamento (UC4)
