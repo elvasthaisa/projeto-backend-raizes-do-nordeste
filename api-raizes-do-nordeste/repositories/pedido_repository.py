@@ -2,7 +2,7 @@ from datetime import date
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from core.enums import CanalPedido, StatusPedido
@@ -46,12 +46,24 @@ def listar(db: Session, canal: Optional[CanalPedido], status: Optional[StatusPed
     return pedidos, total
 
 
+# Muda o status num único comando, só se ele ainda for o status lido. Devolve False se nenhuma linha mudou.
+# O objeto do pedido na sessão não é alterado: o service registra a mudança com o histórico
+def trocar_status_se_igual(db: Session, pedido_id: int, status_lido: StatusPedido, novo_status: StatusPedido) -> bool:
+    comando = (
+        update(Pedido)
+        .where(Pedido.id == pedido_id, Pedido.status == status_lido)
+        .values(status=novo_status)
+        .execution_options(synchronize_session=False)
+    )
+    return db.execute(comando).rowcount == 1
+
+
 # Zero quando a unidade ainda não deu nenhuma senha no dia
 def maior_senha_do_dia(db: Session, unidade_id: int, dia: date) -> int:
     consulta = select(func.coalesce(func.max(Pedido.senha), 0)).where(Pedido.unidade_id == unidade_id, Pedido.data_senha == dia)
     return db.scalar(consulta)
 
 
-# Pedido fictício das rotas que ainda não usam o banco (pronto, retirada e nova tentativa)
+# Pedido fictício das rotas que ainda não usam o banco (pronto e retirada)
 def buscar_por_id(pedido_id: UUID, status_exemplo: StatusPedido = StatusPedido.EM_PREPARO):
     return pedido_exemplo(pedido_id, status_exemplo)

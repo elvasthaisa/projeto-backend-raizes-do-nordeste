@@ -1,10 +1,10 @@
-# Pedidos e pagamentos fictícios, até essas rotas usarem o banco. Só os repositories leem daqui.
+# Pedido fictício, até as rotas de pronto e retirada usarem o banco. Só os repositories leem daqui.
 
 from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from core.enums import CanalPedido, ResultadoPagamento, StatusPedido
+from core.enums import CanalPedido, StatusPedido
 
 # Ids de Recife do seed.py
 UNIDADE_RECIFE = UUID("3f2b8c1e-1a2b-4c3d-8e9f-0a1b2c3d4e5f")
@@ -26,15 +26,3 @@ def pedido_exemplo(pedido_id: UUID, status: StatusPedido = StatusPedido.EM_PREPA
         "total": Decimal("38.00"),
         "senha": 42 if status in (StatusPedido.EM_PREPARO, StatusPedido.PRONTO, StatusPedido.ENTREGUE) else None,
     }
-
-# Tentativas fictícias: uma recusada
-def pagamentos_exemplo() -> list:
-    return [
-        {
-            "id": uuid4(),
-            "valor": Decimal("38.00"),
-            "resultado": ResultadoPagamento.RECUSADO,
-            "motivoRecusa": "Pagamento recusado pela operadora.",
-            "dataHoraResposta": datetime.now(timezone.utc),
-        }
-    ]

@@ -47,6 +47,20 @@ def mudar_status(pedido: Pedido, novo_status: StatusPedido, tipo_responsavel: Ti
     pedido.status = novo_status
 
 
+# Quem fica registrado no histórico. O totem é registrado como CLIENTE anônimo, sem usuário
+def identificar_responsavel(db: Session, usuario: UsuarioLogado) -> tuple:
+    if usuario.perfil == Perfil.TOTEM:
+        return TipoResponsavel.CLIENTE, None
+    return TipoResponsavel(usuario.perfil.value), usuario_repository.buscar_por_uuid(db, usuario.id)
+
+
+# O estoque reservado na criação do pedido volta para a venda
+def devolver_estoque_do_pedido(db: Session, pedido: Pedido):
+    unidade_repository.travar_produtos(db, [item.produto_unidade_id for item in pedido.itens])
+    for item in pedido.itens:
+        item.produto_unidade.devolver_estoque(item.quantidade)
+
+
 def pedido_para_resposta(pedido: Pedido) -> dict:
     return {
         "id": pedido.uuid,
@@ -121,19 +135,13 @@ def registrar_pedido(db: Session, dados: PedidoRequest, usuario: UsuarioLogado) 
                 observacao=observacao,
             )
 
-    # No balcão e no totem anônimo o pedido fica sem cliente.
-    # No histórico, o totem anônimo é registrado como CLIENTE, sem usuário
-    conta = usuario_repository.buscar_por_uuid(db, usuario.id)
-    if usuario.perfil == Perfil.TOTEM:
-        tipo_responsavel, responsavel = TipoResponsavel.CLIENTE, None
-    else:
-        tipo_responsavel, responsavel = TipoResponsavel(usuario.perfil.value), conta
-
+    # No balcão e no totem anônimo o pedido fica sem cliente
+    tipo_responsavel, responsavel = identificar_responsavel(db, usuario)
     pedido = Pedido(
         canal_pedido=dados.canalPedido,
         status=StatusPedido.AGUARDANDO_PAGAMENTO,
         unidade=unidade,
-        cliente=conta if usuario.perfil == Perfil.CLIENTE else None,
+        cliente=responsavel if usuario.perfil == Perfil.CLIENTE else None,
         itens=list(linhas.values()),
     )
     # A 1ª tentativa de pagamento e a 1ª linha do histórico são gravadas junto com o pedido, na mesma transação
@@ -203,13 +211,9 @@ def cancelar_pedido(db: Session, pedido_uuid: UUID, motivo: str, usuario: Usuari
     pedido = buscar_pedido(db, pedido_uuid, usuario, travar=True)
     validar_transicao_pedido(pedido.status, STATUS_CANCELAVEIS, "cancelar")
 
-    # O estoque reservado na criação do pedido volta para a venda
-    unidade_repository.travar_produtos(db, [item.produto_unidade_id for item in pedido.itens])
-    for item in pedido.itens:
-        item.produto_unidade.devolver_estoque(item.quantidade)
-
-    responsavel = usuario_repository.buscar_por_uuid(db, usuario.id)
-    mudar_status(pedido, StatusPedido.PEDIDO_CANCELADO, TipoResponsavel(usuario.perfil.value), responsavel, motivo)
+    devolver_estoque_do_pedido(db, pedido)
+    tipo_responsavel, responsavel = identificar_responsavel(db, usuario)
+    mudar_status(pedido, StatusPedido.PEDIDO_CANCELADO, tipo_responsavel, responsavel, motivo)
     db.commit()
     return pedido_para_resposta(pedido)
 

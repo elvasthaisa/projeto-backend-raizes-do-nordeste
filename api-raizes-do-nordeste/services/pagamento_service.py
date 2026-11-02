@@ -1,6 +1,6 @@
 from decimal import Decimal
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -9,27 +9,33 @@ from core.enums import CenarioMock, ResultadoPagamento, StatusPedido, TipoRespon
 from core.erros import ErroApi
 from gateway.gateway_mock import GatewayMock
 from gateway.gateway_pagamento import GatewayPagamento, RespostaGateway
-from repositories import pagamento_repository, pedido_repository
+from models import Pagamento
+from repositories import pedido_repository
 from schemas.auth import UsuarioLogado
-from services.pedido_service import buscar_pedido, enviar_para_preparo, mudar_status, validar_transicao_pedido
+from services.pedido_service import (buscar_pedido, devolver_estoque_do_pedido, enviar_para_preparo, identificar_responsavel,
+                                     mudar_status, validar_transicao_pedido)
 
 # Novas chamadas ao gateway dentro da mesma tentativa, quando ele não responde
 RETENTATIVAS_GATEWAY = 3
+
+# Tentativas de pagamento por pedido
+LIMITE_TENTATIVAS = 3
+
+
+def pagamento_para_resposta(pagamento: Pagamento) -> dict:
+    return {
+        "id": pagamento.uuid,
+        "valor": pagamento.valor,
+        "resultado": pagamento.resultado,
+        "motivoRecusa": pagamento.motivo_recusa,
+        "dataHoraResposta": pagamento.data_hora_resposta,
+    }
 
 
 # Mesmas regras de acesso do GET /pedidos/{id}
 def listar_pagamentos(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> list:
     pedido = buscar_pedido(db, pedido_uuid, usuario)
-    return [
-        {
-            "id": pagamento.uuid,
-            "valor": pagamento.valor,
-            "resultado": pagamento.resultado,
-            "motivoRecusa": pagamento.motivo_recusa,
-            "dataHoraResposta": pagamento.data_hora_resposta,
-        }
-        for pagamento in pedido.pagamentos
-    ]
+    return [pagamento_para_resposta(pagamento) for pagamento in pedido.pagamentos]
 
 
 # Roda em segundo plano, depois da resposta da requisição, por isso abre a própria sessão do banco
@@ -67,19 +73,31 @@ def registrar_resposta(db: Session, pedido_uuid: UUID, resposta: Optional[Respos
             enviar_para_preparo(db, pedido)
         else:
             mudar_status(pedido, novo_status, TipoResponsavel.SISTEMA)
+            # Na 3ª tentativa sem sucesso o pedido é cancelado na hora, sem esperar os 10 minutos
+            if len(pedido.pagamentos) >= LIMITE_TENTATIVAS:
+                devolver_estoque_do_pedido(db, pedido)
+                mudar_status(pedido, StatusPedido.PEDIDO_CANCELADO, TipoResponsavel.SISTEMA,
+                             motivo="Limite de 3 tentativas de pagamento sem sucesso.")
     db.commit()
 
 
-def nova_tentativa(pedido_id: UUID, cenario: CenarioMock) -> dict:
-    # Dados de exemplo: pedido recusado na 1ª tentativa
-    # Próxima etapa: gravar a tentativa e chamar o gateway mock com o cenário
-    pedido = pedido_repository.buscar_por_id(pedido_id, StatusPedido.PAGAMENTO_RECUSADO)
-    tentativas = pagamento_repository.listar_por_pedido(pedido_id)
+def nova_tentativa(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> dict:
+    pedido = buscar_pedido(db, pedido_uuid, usuario)
 
     # Só pedido recusado ou expirado pode tentar de novo, até 3 tentativas (UC3 FA3)
-    validar_transicao_pedido(pedido["status"], (StatusPedido.PAGAMENTO_RECUSADO, StatusPedido.PAGAMENTO_EXPIRADO), "pedir nova tentativa de pagamento")
-    if len(tentativas) >= 3:
+    validar_transicao_pedido(pedido.status, (StatusPedido.PAGAMENTO_RECUSADO, StatusPedido.PAGAMENTO_EXPIRADO), "pedir nova tentativa de pagamento")
+
+    # Dois cliques ao mesmo tempo: o primeiro muda o status, o segundo não encontra mais o status lido e recebe 409
+    if not pedido_repository.trocar_status_se_igual(db, pedido.id, pedido.status, StatusPedido.AGUARDANDO_PAGAMENTO):
+        raise ErroApi(409, "TRANSICAO_INVALIDA", "O pedido mudou de status enquanto a tentativa era pedida. Consulte o pedido.")
+    if len(pedido.pagamentos) >= LIMITE_TENTATIVAS:
         raise ErroApi(409, "LIMITE_TENTATIVAS", "O pedido já atingiu o limite de 3 tentativas de pagamento.")
 
+    tipo_responsavel, responsavel = identificar_responsavel(db, usuario)
+    mudar_status(pedido, StatusPedido.AGUARDANDO_PAGAMENTO, tipo_responsavel, responsavel)
+
     # A tentativa nasce PENDENTE; o resultado chega depois, pelo gateway
-    return {"id": uuid4(), "valor": pedido["total"], "resultado": ResultadoPagamento.PENDENTE}
+    pagamento = Pagamento(valor=pedido.calcular_total(), resultado=ResultadoPagamento.PENDENTE)
+    pedido.pagamentos.append(pagamento)
+    db.commit()
+    return pagamento_para_resposta(pagamento)

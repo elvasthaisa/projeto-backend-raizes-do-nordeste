@@ -94,7 +94,6 @@ def listar_pagamentos(id: UUID, usuario: Annotated[UsuarioLogado, Depends(usuari
     summary="Pedir nova tentativa de pagamento",
     response_model=PagamentoResponse,
     status_code=201,
-    dependencies=[Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE, Perfil.TOTEM))],
     responses={
         401: {"model": ErroResponse, "description": "NAO_AUTENTICADO"},
         403: {"model": ErroResponse, "description": "ACESSO_NEGADO"},
@@ -103,8 +102,17 @@ def listar_pagamentos(id: UUID, usuario: Annotated[UsuarioLogado, Depends(usuari
         422: {"model": ErroResponse, "description": "VALIDACAO"},
     },
 )
-def nova_tentativa(id: UUID, tentativa: Annotated[NovaTentativaRequest, Body(openapi_examples=EXEMPLOS_TENTATIVA)]):
-    return pagamento_service.nova_tentativa(id, tentativa.cenarioMock)
+def nova_tentativa(
+    id: UUID,
+    tentativa: Annotated[NovaTentativaRequest, Body(openapi_examples=EXEMPLOS_TENTATIVA)],
+    usuario: Annotated[UsuarioLogado, Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE, Perfil.TOTEM))],
+    # Fecha ao fim da rota, como no POST /pedidos
+    db: Annotated[Session, Depends(get_db, scope="function")],
+    tarefas: BackgroundTasks,
+):
+    resposta = pagamento_service.nova_tentativa(db, id, usuario)
+    tarefas.add_task(pagamento_service.processar_pagamento, id, resposta["valor"], tentativa.cenarioMock)
+    return resposta
 
 
 # Mudanças de status: uma rota por ação
