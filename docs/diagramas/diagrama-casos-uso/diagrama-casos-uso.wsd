@@ -15,8 +15,8 @@
     usecase "Cancelar Pedido (UC4)" as UC4
     usecase "Marcar Pedido como Pronto (UC5)" as UC5
     usecase "Confirmar Retirada (UC6)" as UC6
-    usecase "Ativar/Desativar Produto na Unidade (UC7)" as UC7
-    usecase "Ativar/Desativar Produto do Catálogo (UC8)" as UC8
+    usecase "Ativar/Desativar Produto na Unidade (UC7)" as UC7 <<planejado>>
+    usecase "Ativar/Desativar Produto do Catálogo (UC8)" as UC8 <<planejado>>
     usecase "Organizar Campanhas de Marketing (UC9)" as UC9 <<planejado>>
     usecase "Liberar Desconto (UC10)" as UC10 <<planejado>>
     usecase "Gerar Relatórios Consolidados (UC11)" as UC11 <<planejado>>

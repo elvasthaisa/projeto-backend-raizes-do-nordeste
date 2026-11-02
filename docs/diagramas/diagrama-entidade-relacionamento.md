@@ -17,7 +17,7 @@ erDiagram
         varchar nome
         varchar email UK
         varchar senha_hash
-        varchar perfil "ENUM: CLIENTE, ATENDENTE, COZINHA, GERENTE, ADMIN" 
+        varchar perfil "ENUM: CLIENTE, ATENDENTE, COZINHA, GERENTE, ADMIN, TOTEM" 
         bool ativo
 
         int unidade_id FK "anulável"

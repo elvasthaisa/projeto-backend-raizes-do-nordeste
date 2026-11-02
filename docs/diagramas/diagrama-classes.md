@@ -9,8 +9,6 @@ classDiagram
         +senha: Optional[int]
         +dataSenha: Optional[date]
         +calcularTotal() Decimal
-        +podeIniciarTentativa() bool
-        +podeCancelar() bool
     }
     class ItemPedido {
         +id: int
@@ -86,8 +84,7 @@ classDiagram
         +estoque: int
         +ativo: bool
         +disponivelSazonal: bool
-        +estaNoCardapio() bool
-        +reservarEstoque(quantidade: int) None
+        +reservarEstoque(quantidade: int) bool
         +devolverEstoque(quantidade: int) None
     }
     class Unidade {
@@ -113,7 +110,6 @@ classDiagram
         -senhaHash: str
         +perfil: Perfil
         +ativo: bool
-        +ehFuncionario() bool
     }
     class Perfil {
         <<enumeration>>
@@ -122,6 +118,7 @@ classDiagram
         COZINHA
         GERENTE
         ADMIN
+        TOTEM
     }
 
 
@@ -148,6 +145,6 @@ classDiagram
 
     note for HistoricoStatusPedido "Regra 1: O Usuário fica vazio quando o tipoResponsavel for SISTEMA ou <br> quando for um CLIENTE anônimo (pedido sem identificação no totem). Nos demais casos, é obrigatório. <br>Regra 2: As linhas são imutáveis. Uma vez gravada, a linha do histórico não é mais alterada nem apagada."
     note for Unidade "A UF é uma sigla que permite apenas 2 letras, correspondentes aos estados brasileiros."
-    note for Usuario "A Unidade é obrigatória para Perfil ATENDENTE, COZINHA e GERENTE, e vazia para CLIENTE e ADMIN."
+    note for Usuario "A Unidade é obrigatória para Perfil ATENDENTE, COZINHA, GERENTE e TOTEM, e vazia para CLIENTE e ADMIN."
     note for Pedido "A senha e a dataSenha ficam vazias até o pagamento ser aprovado e são gravadas junto com a mudança para EM_PREPARO. <br>A partir de EM_PREPARO, todo pedido tem senha. Pedidos cancelados nunca recebem senha."
 ```
