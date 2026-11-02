@@ -1,12 +1,13 @@
 from typing import Annotated, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.enums import CanalPedido, Perfil, StatusPedido
 from core.erros import ErroResponse
+from core.log_acesso import registrar_acesso
 from core.seguranca import exigir_perfis, usuario_atual
 from schemas.auth import UsuarioLogado
 from schemas.pagamento import EXEMPLOS_TENTATIVA, NovaTentativaRequest, PagamentoResponse
@@ -52,6 +53,7 @@ def registrar_pedido(
     },
 )
 def listar_pedidos(
+    request: Request,
     usuario: Annotated[UsuarioLogado, Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE, Perfil.COZINHA, Perfil.GERENTE, Perfil.ADMIN))],
     db: Annotated[Session, Depends(get_db)],
     canalPedido: Optional[CanalPedido] = None,
@@ -59,7 +61,9 @@ def listar_pedidos(
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
 ):
-    return pedido_service.listar_pedidos(db, usuario, canalPedido, status, page, limit)
+    pagina = pedido_service.listar_pedidos(db, usuario, canalPedido, status, page, limit)
+    registrar_acesso(request, usuario)
+    return pagina
 
 @router.get(
     "/{id}",
@@ -72,8 +76,10 @@ def listar_pedidos(
         422: {"model": ErroResponse, "description": "VALIDACAO (id não é um uuid)"},
     },
 )
-def consultar_pedido(id: UUID, usuario: Annotated[UsuarioLogado, Depends(usuario_atual)], db: Annotated[Session, Depends(get_db)]):
-    return pedido_service.consultar_pedido(db, id, usuario)
+def consultar_pedido(id: UUID, request: Request, usuario: Annotated[UsuarioLogado, Depends(usuario_atual)], db: Annotated[Session, Depends(get_db)]):
+    pedido = pedido_service.consultar_pedido(db, id, usuario)
+    registrar_acesso(request, usuario)
+    return pedido
 
 @router.get(
     "/{id}/pagamentos",
@@ -86,8 +92,10 @@ def consultar_pedido(id: UUID, usuario: Annotated[UsuarioLogado, Depends(usuario
         422: {"model": ErroResponse, "description": "VALIDACAO (id não é um uuid)"},
     },
 )
-def listar_pagamentos(id: UUID, usuario: Annotated[UsuarioLogado, Depends(usuario_atual)], db: Annotated[Session, Depends(get_db)]):
-    return pagamento_service.listar_pagamentos(db, id, usuario)
+def listar_pagamentos(id: UUID, request: Request, usuario: Annotated[UsuarioLogado, Depends(usuario_atual)], db: Annotated[Session, Depends(get_db)]):
+    pagamentos = pagamento_service.listar_pagamentos(db, id, usuario)
+    registrar_acesso(request, usuario)
+    return pagamentos
 
 @router.get(
     "/{id}/historico",
@@ -102,11 +110,14 @@ def listar_pagamentos(id: UUID, usuario: Annotated[UsuarioLogado, Depends(usuari
 )
 def listar_historico(
     id: UUID,
+    request: Request,
     # O totem é um aparelho compartilhado. Sem esta trava, o próximo cliente veria o histórico do pedido anterior
     usuario: Annotated[UsuarioLogado, Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE, Perfil.COZINHA, Perfil.GERENTE, Perfil.ADMIN))],
     db: Annotated[Session, Depends(get_db)],
 ):
-    return pedido_service.listar_historico(db, id, usuario)
+    historico = pedido_service.listar_historico(db, id, usuario)
+    registrar_acesso(request, usuario)
+    return historico
 
 @router.post(
     "/{id}/pagamentos",

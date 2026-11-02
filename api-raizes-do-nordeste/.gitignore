@@ -3,5 +3,8 @@
 __pycache__/
 *.pyc
 
+# Logs de acesso gerados pela API
+logs/
+
 # Variáveis de ambiente (segredos); o .env.example entra no repositório
 .env
