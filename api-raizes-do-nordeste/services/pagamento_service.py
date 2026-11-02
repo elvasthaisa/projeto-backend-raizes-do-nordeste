@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
@@ -20,6 +21,12 @@ RETENTATIVAS_GATEWAY = 3
 
 # Tentativas de pagamento por pedido
 LIMITE_TENTATIVAS = 3
+
+# Prazo para pagar depois de uma tentativa sem sucesso, contado da resposta do gateway
+PRAZO_PAGAMENTO = timedelta(minutes=10)
+
+# Status de onde o cliente pode tentar pagar de novo
+STATUS_SEM_SUCESSO = (StatusPedido.PAGAMENTO_RECUSADO, StatusPedido.PAGAMENTO_EXPIRADO)
 
 
 def pagamento_para_resposta(pagamento: Pagamento) -> dict:
@@ -85,7 +92,7 @@ def nova_tentativa(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> di
     pedido = buscar_pedido(db, pedido_uuid, usuario)
 
     # Só pedido recusado ou expirado pode tentar de novo, até 3 tentativas (UC3 FA3)
-    validar_transicao_pedido(pedido.status, (StatusPedido.PAGAMENTO_RECUSADO, StatusPedido.PAGAMENTO_EXPIRADO), "pedir nova tentativa de pagamento")
+    validar_transicao_pedido(pedido.status, STATUS_SEM_SUCESSO, "pedir nova tentativa de pagamento")
 
     # Dois cliques ao mesmo tempo: o primeiro muda o status, o segundo não encontra mais o status lido e recebe 409
     if not pedido_repository.trocar_status_se_igual(db, pedido.id, pedido.status, StatusPedido.AGUARDANDO_PAGAMENTO):
@@ -101,3 +108,17 @@ def nova_tentativa(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> di
     pedido.pagamentos.append(pagamento)
     db.commit()
     return pagamento_para_resposta(pagamento)
+
+
+# Chamada pela rotina que roda a cada minuto. Cada pedido é cancelado na sua própria transação
+def cancelar_pedidos_com_prazo_vencido():
+    limite = datetime.now(timezone.utc) - PRAZO_PAGAMENTO
+    with SessionLocal() as db:
+        for pedido_uuid in pedido_repository.listar_prazo_vencido(db, STATUS_SEM_SUCESSO, limite):
+            pedido = pedido_repository.buscar_por_uuid(db, pedido_uuid, travar=True)
+            # Confere de novo com o pedido travado, porque uma nova tentativa pode ter chegado depois da consulta
+            if pedido.status in STATUS_SEM_SUCESSO and pedido.pagamentos[-1].data_hora_resposta < limite:
+                devolver_estoque_do_pedido(db, pedido)
+                mudar_status(pedido, StatusPedido.PEDIDO_CANCELADO, TipoResponsavel.SISTEMA,
+                             motivo="Prazo de 10 minutos para o pagamento esgotado.")
+            db.commit()

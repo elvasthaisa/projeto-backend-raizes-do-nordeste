@@ -1,7 +1,12 @@
+import asyncio
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from controllers import auth_controller, pedido_controller, unidade_controller, usuario_controller
 from core.erros import registrar_tratadores_de_erro
+from services import pagamento_service
 
 DESCRICAO = """
 API de back-end da rede de restaurantes Raízes do Nordeste.
@@ -32,10 +37,29 @@ Onde `unidade` é `recife`, `saopaulo` ou `fortaleza`. Exemplo: `atendente.recif
 Os ids das unidades estão em `GET /unidades`, e os dos produtos, em `GET /unidades/{id}/cardapio`.
 """
 
+# Rotina que roda enquanto a API estiver no ar: a cada minuto, cancela os pedidos que passaram do prazo de pagamento.
+# Um erro numa rodada fica no log e não interrompe as próximas
+async def verificar_prazos_de_pagamento():
+    while True:
+        try:
+            await asyncio.to_thread(pagamento_service.cancelar_pedidos_com_prazo_vencido)
+        except Exception:
+            logging.exception("Erro ao cancelar pedidos com prazo de pagamento vencido")
+        await asyncio.sleep(60)
+
+
+@asynccontextmanager
+async def ciclo_de_vida(app: FastAPI):
+    rotina = asyncio.create_task(verificar_prazos_de_pagamento())
+    yield
+    rotina.cancel()
+
+
 app = FastAPI(
     title="API Raízes do Nordeste",
     description=DESCRICAO,
-    version="1.0.0")
+    version="1.0.0",
+    lifespan=ciclo_de_vida)
 
 registrar_tratadores_de_erro(app)
 app.include_router(auth_controller.router)

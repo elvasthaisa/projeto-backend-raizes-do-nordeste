@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
@@ -6,7 +6,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from core.enums import CanalPedido, StatusPedido
-from models import ItemPedido, Pedido
+from models import ItemPedido, Pagamento, Pedido
 from repositories.dados_exemplo import pedido_exemplo
 
 
@@ -56,6 +56,14 @@ def trocar_status_se_igual(db: Session, pedido_id: int, status_lido: StatusPedid
         .execution_options(synchronize_session=False)
     )
     return db.execute(comando).rowcount == 1
+
+
+# Pedidos parados em um dos status informados (recusado ou expirado) há mais tempo que o prazo.
+# Compara o limite com a hora em que o gateway respondeu a última tentativa de pagamento do pedido
+def listar_prazo_vencido(db: Session, status: tuple, limite: datetime) -> list:
+    ultima_resposta = select(func.max(Pagamento.data_hora_resposta)).where(Pagamento.pedido_id == Pedido.id).scalar_subquery()
+    consulta = select(Pedido.uuid).where(Pedido.status.in_(status), ultima_resposta < limite)
+    return db.scalars(consulta).all()
 
 
 # Zero quando a unidade ainda não deu nenhuma senha no dia
