@@ -121,7 +121,6 @@ def nova_tentativa(
     "/{id}/pronto",
     summary="Marcar pedido como pronto",
     response_model=PedidoResponse,
-    dependencies=[Depends(exigir_perfis(Perfil.COZINHA))],
     responses={
         401: {"model": ErroResponse, "description": "NAO_AUTENTICADO"},
         403: {"model": ErroResponse, "description": "ACESSO_NEGADO"},
@@ -130,8 +129,12 @@ def nova_tentativa(
         422: {"model": ErroResponse, "description": "VALIDACAO"},
     },
 )
-def marcar_pronto(id: UUID):
-    return pedido_service.marcar_pronto(id)
+def marcar_pronto(
+    id: UUID,
+    usuario: Annotated[UsuarioLogado, Depends(exigir_perfis(Perfil.COZINHA))],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return pedido_service.marcar_pronto(db, id, usuario)
 
 @router.post(
     "/{id}/retirada",
@@ -145,8 +148,12 @@ def marcar_pronto(id: UUID):
         422: {"model": ErroResponse, "description": "VALIDACAO"},
     },
 )
-def confirmar_retirada(id: UUID, usuario: Annotated[UsuarioLogado, Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE))]):
-    return pedido_service.confirmar_retirada(id, usuario)
+def confirmar_retirada(
+    id: UUID,
+    usuario: Annotated[UsuarioLogado, Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE))],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return pedido_service.confirmar_retirada(db, id, usuario)
 
 @router.post(
     "/{id}/cancelamento",

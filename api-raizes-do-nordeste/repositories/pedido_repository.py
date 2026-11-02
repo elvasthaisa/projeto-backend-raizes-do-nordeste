@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session, selectinload
 
 from core.enums import CanalPedido, StatusPedido
 from models import ItemPedido, Pagamento, Pedido
-from repositories.dados_exemplo import pedido_exemplo
 
 
 def adicionar(db: Session, pedido: Pedido):
@@ -71,7 +70,3 @@ def maior_senha_do_dia(db: Session, unidade_id: int, dia: date) -> int:
     consulta = select(func.coalesce(func.max(Pedido.senha), 0)).where(Pedido.unidade_id == unidade_id, Pedido.data_senha == dia)
     return db.scalar(consulta)
 
-
-# Pedido fictício das rotas que ainda não usam o banco (pronto e retirada)
-def buscar_por_id(pedido_id: UUID, status_exemplo: StatusPedido = StatusPedido.EM_PREPARO):
-    return pedido_exemplo(pedido_id, status_exemplo)

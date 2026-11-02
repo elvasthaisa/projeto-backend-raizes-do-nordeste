@@ -189,22 +189,28 @@ def consultar_pedido(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> 
     return pedido_para_resposta(buscar_pedido(db, pedido_uuid, usuario))
 
 
-# Mudanças de status. Próxima etapa: gravar o status e o histórico na mesma transação
+# Mudanças de status. O pedido fica travado até o commit, para duas mudanças não acontecerem ao mesmo tempo
 
-def marcar_pronto(pedido_id: UUID) -> dict:
-    pedido = pedido_repository.buscar_por_id(pedido_id, StatusPedido.EM_PREPARO)
-    validar_transicao_pedido(pedido["status"], (StatusPedido.EM_PREPARO,), "marcar como pronto")
-    pedido["status"] = StatusPedido.PRONTO
-    return pedido
+def marcar_pronto(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> dict:
+    pedido = buscar_pedido(db, pedido_uuid, usuario, travar=True)
+    validar_transicao_pedido(pedido.status, (StatusPedido.EM_PREPARO,), "marcar como pronto")
+
+    tipo_responsavel, responsavel = identificar_responsavel(db, usuario)
+    mudar_status(pedido, StatusPedido.PRONTO, tipo_responsavel, responsavel)
+    db.commit()
+    return pedido_para_resposta(pedido)
 
 
-def confirmar_retirada(pedido_id: UUID, usuario: UsuarioLogado) -> dict:
-    pedido = pedido_repository.buscar_por_id(pedido_id, StatusPedido.PRONTO)
-    if pedido["canalPedido"] not in CANAIS_DA_RETIRADA[usuario.perfil]:
-        raise ErroApi(403, "ACESSO_NEGADO", f"A retirada de pedidos do canal {pedido['canalPedido'].value} não é confirmada pelo perfil {usuario.perfil.value}.")
-    validar_transicao_pedido(pedido["status"], (StatusPedido.PRONTO,), "confirmar a retirada")
-    pedido["status"] = StatusPedido.ENTREGUE
-    return pedido
+def confirmar_retirada(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> dict:
+    pedido = buscar_pedido(db, pedido_uuid, usuario, travar=True)
+    if pedido.canal_pedido not in CANAIS_DA_RETIRADA[usuario.perfil]:
+        raise ErroApi(403, "ACESSO_NEGADO", f"A retirada de pedidos do canal {pedido.canal_pedido.value} não é confirmada pelo perfil {usuario.perfil.value}.")
+    validar_transicao_pedido(pedido.status, (StatusPedido.PRONTO,), "confirmar a retirada")
+
+    tipo_responsavel, responsavel = identificar_responsavel(db, usuario)
+    mudar_status(pedido, StatusPedido.ENTREGUE, tipo_responsavel, responsavel)
+    db.commit()
+    return pedido_para_resposta(pedido)
 
 
 def cancelar_pedido(db: Session, pedido_uuid: UUID, motivo: str, usuario: UsuarioLogado) -> dict:
