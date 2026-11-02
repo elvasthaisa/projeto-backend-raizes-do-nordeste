@@ -1,13 +1,27 @@
 from uuid import UUID, uuid4
 
+from sqlalchemy.orm import Session
+
 from core.enums import CenarioMock, ResultadoPagamento, StatusPedido
 from core.erros import ErroApi
 from repositories import pagamento_repository, pedido_repository
-from services.pedido_service import validar_transicao_pedido
+from schemas.auth import UsuarioLogado
+from services.pedido_service import buscar_pedido, validar_transicao_pedido
 
 
-def listar_pagamentos(pedido_id: UUID) -> list:
-    return pagamento_repository.listar_por_pedido(pedido_id)
+# Mesmas regras de acesso do GET /pedidos/{id}
+def listar_pagamentos(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> list:
+    pedido = buscar_pedido(db, pedido_uuid, usuario)
+    return [
+        {
+            "id": pagamento.uuid,
+            "valor": pagamento.valor,
+            "resultado": pagamento.resultado,
+            "motivoRecusa": pagamento.motivo_recusa,
+            "dataHoraResposta": pagamento.data_hora_resposta,
+        }
+        for pagamento in pedido.pagamentos
+    ]
 
 
 def nova_tentativa(pedido_id: UUID, cenario: CenarioMock) -> dict:

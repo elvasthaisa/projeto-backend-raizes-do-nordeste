@@ -58,7 +58,7 @@ def registrar_pedido(db: Session, dados: PedidoRequest, usuario: UsuarioLogado) 
     if dados.canalPedido not in CANAIS_POR_PERFIL[usuario.perfil]:
         raise ErroApi(403, "CANAL_NAO_PERMITIDO", f"O perfil {usuario.perfil.value} não pode criar pedidos no canal {dados.canalPedido.value}.")
 
-    # Unidade do pedido: o cliente escolhe; atendente e totem usam a da conta
+    # Unidade do pedido: o cliente escolhe, e o atendente e o totem usam a da conta
     if usuario.perfil == Perfil.CLIENTE:
         if dados.unidadeId is None:
             raise ErroApi(422, "VALIDACAO", "Um ou mais campos são inválidos.", [DetalheErro(field="unidadeId", issue="campo obrigatório")])
@@ -130,15 +130,40 @@ def registrar_pedido(db: Session, dados: PedidoRequest, usuario: UsuarioLogado) 
     return pedido_para_resposta(pedido)
 
 
-def listar_pedidos(canal: Optional[CanalPedido], status: Optional[StatusPedido], page: int, limit: int) -> dict:
-    # Com o banco: CLIENTE vê só os seus pedidos; funcionários, os da sua unidade; ADMIN, todos
-    pedidos = pedido_repository.listar(canal, status)
-    return {"pedidos": pedidos, "page": page, "limit": limit, "total": len(pedidos)}
+def listar_pedidos(db: Session, usuario: UsuarioLogado, canal: Optional[CanalPedido], status: Optional[StatusPedido], page: int, limit: int) -> dict:
+    # O cliente vê só os seus pedidos, os funcionários veem os da sua unidade e o admin vê todos
+    cliente_id = unidade_id = None
+    if usuario.perfil == Perfil.CLIENTE:
+        cliente_id = usuario_repository.buscar_por_uuid(db, usuario.id).id
+    elif usuario.perfil != Perfil.ADMIN:
+        unidade_id = unidade_repository.buscar_por_uuid(db, usuario.unidadeId).id
+
+    pedidos, total = pedido_repository.listar(db, canal, status, cliente_id, unidade_id, page, limit)
+    return {"pedidos": [pedido_para_resposta(pedido) for pedido in pedidos], "page": page, "limit": limit, "total": total}
 
 
-def consultar_pedido(pedido_id: UUID) -> dict:
-    # Com o banco: checagem do dono do pedido ou da unidade
-    return pedido_repository.buscar_por_id(pedido_id)
+# Busca o pedido e confere se quem pede pode vê-lo: o cliente dono do pedido, os funcionários da unidade,
+# o totem da unidade (só pedidos feitos no totem) e o admin
+def buscar_pedido(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> Pedido:
+    pedido = pedido_repository.buscar_por_uuid(db, pedido_uuid)
+    if pedido is None:
+        raise ErroApi(404, "NAO_ENCONTRADO", "Pedido não encontrado.")
+
+    if usuario.perfil == Perfil.ADMIN:
+        permitido = True
+    elif usuario.perfil == Perfil.CLIENTE:
+        permitido = pedido.cliente is not None and pedido.cliente.uuid == usuario.id
+    elif usuario.perfil == Perfil.TOTEM:
+        permitido = pedido.unidade.uuid == usuario.unidadeId and pedido.canal_pedido == CanalPedido.TOTEM
+    else:
+        permitido = pedido.unidade.uuid == usuario.unidadeId
+    if not permitido:
+        raise ErroApi(403, "ACESSO_NEGADO", "Você não tem acesso a este pedido.")
+    return pedido
+
+
+def consultar_pedido(db: Session, pedido_uuid: UUID, usuario: UsuarioLogado) -> dict:
+    return pedido_para_resposta(buscar_pedido(db, pedido_uuid, usuario))
 
 
 # Mudanças de status. Próxima etapa: gravar o status e o histórico na mesma transação

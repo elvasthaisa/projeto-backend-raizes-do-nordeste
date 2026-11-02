@@ -40,7 +40,6 @@ def registrar_pedido(
     "",
     summary="Listar pedidos",
     response_model=PaginaPedidos,
-    dependencies=[Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE, Perfil.COZINHA, Perfil.GERENTE, Perfil.ADMIN))],
     responses={
         401: {"model": ErroResponse, "description": "NAO_AUTENTICADO"},
         403: {"model": ErroResponse, "description": "ACESSO_NEGADO"},
@@ -48,18 +47,19 @@ def registrar_pedido(
     },
 )
 def listar_pedidos(
+    usuario: Annotated[UsuarioLogado, Depends(exigir_perfis(Perfil.CLIENTE, Perfil.ATENDENTE, Perfil.COZINHA, Perfil.GERENTE, Perfil.ADMIN))],
+    db: Annotated[Session, Depends(get_db)],
     canalPedido: Optional[CanalPedido] = None,
     status: Optional[StatusPedido] = None,
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
 ):
-    return pedido_service.listar_pedidos(canalPedido, status, page, limit)
+    return pedido_service.listar_pedidos(db, usuario, canalPedido, status, page, limit)
 
 @router.get(
     "/{id}",
     summary="Consultar um pedido",
     response_model=PedidoResponse,
-    dependencies=[Depends(usuario_atual)], # todos os perfis; a checagem do dono/unidade entra com o banco
     responses={
         401: {"model": ErroResponse, "description": "NAO_AUTENTICADO"},
         403: {"model": ErroResponse, "description": "ACESSO_NEGADO (pedido de outro cliente ou de outra unidade)"},
@@ -67,14 +67,13 @@ def listar_pedidos(
         422: {"model": ErroResponse, "description": "VALIDACAO (id não é um uuid)"},
     },
 )
-def consultar_pedido(id: UUID):
-    return pedido_service.consultar_pedido(id)
+def consultar_pedido(id: UUID, usuario: Annotated[UsuarioLogado, Depends(usuario_atual)], db: Annotated[Session, Depends(get_db)]):
+    return pedido_service.consultar_pedido(db, id, usuario)
 
 @router.get(
     "/{id}/pagamentos",
     summary="Listar as tentativas de pagamento do pedido",
     response_model=List[PagamentoResponse],
-    dependencies=[Depends(usuario_atual)], # mesmos perfis do GET /pedidos/{id}
     responses={
         401: {"model": ErroResponse, "description": "NAO_AUTENTICADO"},
         403: {"model": ErroResponse, "description": "ACESSO_NEGADO (pedido de outro cliente ou de outra unidade)"},
@@ -82,8 +81,8 @@ def consultar_pedido(id: UUID):
         422: {"model": ErroResponse, "description": "VALIDACAO (id não é um uuid)"},
     },
 )
-def listar_pagamentos(id: UUID):
-    return pagamento_service.listar_pagamentos(id)
+def listar_pagamentos(id: UUID, usuario: Annotated[UsuarioLogado, Depends(usuario_atual)], db: Annotated[Session, Depends(get_db)]):
+    return pagamento_service.listar_pagamentos(db, id, usuario)
 
 @router.post(
     "/{id}/pagamentos",
