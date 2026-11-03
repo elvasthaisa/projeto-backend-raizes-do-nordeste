@@ -167,6 +167,10 @@ uvicorn main:app --reload
 
 A API fica no ar em http://127.0.0.1:8000. Para desligar, use `Ctrl+C`.
 
+Para conferir se a API e o banco estão respondendo, acesse
+http://127.0.0.1:8000/health. A resposta esperada é `200` com
+`"status": "UP"`. Se o banco estiver fora do ar, a resposta é `503`.
+
 Da próxima vez, basta abrir o Docker Desktop, ativar o ambiente virtual e
 rodar `docker compose up -d` e `uvicorn main:app --reload`. Os passos 2, 5
 e 6 só são feitos uma vez.
@@ -207,14 +211,15 @@ Para testar com um cliente novo, cadastre-o em `POST /usuarios`.
 
 Os testes estão na coleção
 `api-raizes-do-nordeste/postman/raizes-do-nordeste.postman_collection.json`:
-30 requisições em 5 pastas, com verificações automáticas em cada uma.
+32 requisições em 6 pastas, com verificações automáticas em cada uma.
 
 | Pasta | Requisições | O que testa |
 |---|---|---|
+| Health | T00 | Healthcheck: API e banco no ar (`GET /health`) |
 | Auth | T01 a T05 | Login, token, 401 e 403 |
 | Unidades | T06 a T07c | Unidades e cardápio de cada unidade |
 | Erros | T08 a T12 | Validação (422) e unidade ou produto inexistente (404) |
-| Pedidos | T13 a T19 | Fluxo principal (pedido → pagamento aprovado → pronto → retirada) e erros de estoque (409) |
+| Pedidos | T13 a T19 e T29 | Fluxo principal (pedido → pagamento aprovado → pronto → retirada), erros de estoque (409) e filtro de pedidos por canal |
 | Pagamento | T20 a T28 | Pagamento recusado, nova tentativa, cancelamento e histórico do pedido |
 
 **Antes de rodar:** a API precisa estar no ar e o banco precisa ter os

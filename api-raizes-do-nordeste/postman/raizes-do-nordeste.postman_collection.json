@@ -8,6 +8,47 @@
 	},
 	"item": [
 		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "T00 - Healthcheck: API e banco no ar",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const corpo = pm.response.json();",
+									"pm.test(\"API e banco UP\", () => pm.expect([corpo.status, corpo.banco]).to.eql([\"UP\", \"UP\"]));",
+									"pm.test(\"Informa data e hora da verificação\", () => pm.expect(corpo.timestamp).to.be.a(\"string\").and.not.empty);"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Rota pública. Responde 200 quando a API e o banco respondem. Com o banco fora do ar, responde 503 SERVICO_INDISPONIVEL no padrão de erro (testado manualmente parando o container do banco)."
+					},
+					"response": []
+				}
+			],
+			"description": "Verifica se a API e o banco estão no ar antes dos demais testes. Pré-condição: nenhuma."
+		},
+		{
 			"name": "Auth",
 			"item": [
 				{
@@ -1021,9 +1062,61 @@
 						"description": "A cocada de Recife foi desativada pelo gerente (seed)."
 					},
 					"response": []
+				},
+				{
+					"name": "T29 - Filtrar pedidos por canal (TOTEM)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const corpo = pm.response.json();",
+									"pm.test(\"Todos os pedidos retornados são do canal TOTEM\", () => corpo.pedidos.forEach(p => pm.expect(p.canalPedido).to.eql(\"TOTEM\")));",
+									"pm.test(\"O pedido feito no app não aparece\", () => pm.expect(corpo.pedidos.map(p => p.id)).to.not.include(pm.collectionVariables.get(\"pedidoId\")));"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenCozinha}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/pedidos?canalPedido=TOTEM&limit=100",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pedidos"
+							],
+							"query": [
+								{
+									"key": "canalPedido",
+									"value": "TOTEM"
+								},
+								{
+									"key": "limit",
+									"value": "100"
+								}
+							]
+						},
+						"description": "A cozinha de Recife vê todos os pedidos da unidade. Com o filtro, só voltam os pedidos do totem: o pedido do app criado na T13 (mesma unidade) não pode aparecer."
+					},
+					"response": []
 				}
 			],
-			"description": "Fluxo principal, encadeado: o cliente pede no app, o pagamento mock aprova, a cozinha marca pronto e o cliente retira. Também os 409 de estoque e de produto indisponível. Pré-condição: pasta Auth executada (tokenCliente e tokenCozinha)."
+			"description": "Fluxo principal, encadeado: o cliente pede no app, o pagamento mock aprova, a cozinha marca pronto e o cliente retira. Também os 409 de estoque e de produto indisponível e o filtro de pedidos por canal (T29). Pré-condição: pasta Auth executada (tokenCliente e tokenCozinha)."
 		},
 		{
 			"name": "Pagamento",
