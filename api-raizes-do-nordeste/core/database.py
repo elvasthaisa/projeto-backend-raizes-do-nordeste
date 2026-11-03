@@ -1,5 +1,8 @@
-from sqlalchemy import MetaData, create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+import logging
+
+from sqlalchemy import MetaData, create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from core.config import DATABASE_URL
 
@@ -28,3 +31,13 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# Healthcheck: o banco responde a uma consulta simples? A falha fica no log com o motivo
+def banco_disponivel(db: Session) -> bool:
+    try:
+        db.execute(text("SELECT 1"))
+        return True
+    except SQLAlchemyError:
+        logging.exception("Healthcheck: banco de dados indisponível")
+        return False

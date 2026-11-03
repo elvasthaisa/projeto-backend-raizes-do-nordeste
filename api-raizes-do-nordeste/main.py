@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from controllers import auth_controller, pedido_controller, unidade_controller, usuario_controller
+from controllers import auth_controller, health_controller, pedido_controller, unidade_controller, usuario_controller
 from core.erros import registrar_tratadores_de_erro
 from services import pagamento_service
 
@@ -66,3 +66,4 @@ app.include_router(auth_controller.router)
 app.include_router(pedido_controller.router)
 app.include_router(usuario_controller.router)
 app.include_router(unidade_controller.router)
+app.include_router(health_controller.router)
