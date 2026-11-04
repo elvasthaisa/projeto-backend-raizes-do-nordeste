@@ -1,0 +1,1928 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API RaÃ­zes do Nordeste",
+    "description": "\nAPI de back-end da rede de restaurantes RaÃ­zes do Nordeste.\n\nCobre o fluxo de pedido de ponta a ponta: o cliente escolhe a unidade e os itens do cardÃ¡pio, o pedido Ã© registrado\ncom o canal de origem (`APP`, `WEB`, `PICKUP`, `TOTEM` ou `BALCAO`), o pagamento Ã© processado por um gateway simulado\ne o pedido segue atÃ© a entrega, passando por preparo e retirada.\n\nO acesso Ã© controlado por login (JWT) e perfis: cliente, atendente, cozinha, gerente, administrador e totem.\n\n**Como testar:**\n1. FaÃ§a login em `POST /auth/login` (escolha um usuÃ¡rio na lista de exemplos; senha `senha123`).\n   Para testar com um cliente novo, cadastre-o antes em `POST /usuarios`.\n2. Copie o `accessToken` da resposta.\n3. Clique em **Authorize** (cadeado no topo), cole o token e confirme.\n4. Use as rotas. Para trocar de perfil, repita os passos 1 a 3. Se recarregar a pÃ¡gina, faÃ§a o Authorize de novo.\n\n| UsuÃ¡rio | Perfil | Unidade |\n|---|---|---|\n| cliente@raizes.com | CLIENTE | escolhe no pedido |\n| admin@raizes.com | ADMIN | todas |\n| atendente.`unidade`@raizes.com | ATENDENTE | a da conta |\n| cozinha.`unidade`@raizes.com | COZINHA | a da conta |\n| gerente.`unidade`@raizes.com | GERENTE | a da conta |\n| totem.`unidade`@raizes.com | TOTEM | a da conta |\n\nOnde `unidade` Ã© `recife`, `saopaulo` ou `fortaleza`. Exemplo: `atendente.recife@raizes.com`.\nOs ids das unidades estÃ£o em `GET /unidades`, e os dos produtos, em `GET /unidades/{id}/cardapio`.\n",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Fazer login",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "examples": {
+                "cliente": {
+                  "summary": "Cliente",
+                  "value": {
+                    "email": "cliente@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "admin": {
+                  "summary": "Admin",
+                  "value": {
+                    "email": "admin@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "atendente_recife": {
+                  "summary": "Atendente - Recife",
+                  "value": {
+                    "email": "atendente.recife@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "cozinha_recife": {
+                  "summary": "Cozinha - Recife",
+                  "value": {
+                    "email": "cozinha.recife@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "gerente_recife": {
+                  "summary": "Gerente - Recife",
+                  "value": {
+                    "email": "gerente.recife@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "totem_recife": {
+                  "summary": "Totem - Recife",
+                  "value": {
+                    "email": "totem.recife@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "atendente_saopaulo": {
+                  "summary": "Atendente - SÃ£o Paulo",
+                  "value": {
+                    "email": "atendente.saopaulo@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "cozinha_saopaulo": {
+                  "summary": "Cozinha - SÃ£o Paulo",
+                  "value": {
+                    "email": "cozinha.saopaulo@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "gerente_saopaulo": {
+                  "summary": "Gerente - SÃ£o Paulo",
+                  "value": {
+                    "email": "gerente.saopaulo@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "totem_saopaulo": {
+                  "summary": "Totem - SÃ£o Paulo",
+                  "value": {
+                    "email": "totem.saopaulo@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "atendente_fortaleza": {
+                  "summary": "Atendente - Fortaleza",
+                  "value": {
+                    "email": "atendente.fortaleza@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "cozinha_fortaleza": {
+                  "summary": "Cozinha - Fortaleza",
+                  "value": {
+                    "email": "cozinha.fortaleza@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "gerente_fortaleza": {
+                  "summary": "Gerente - Fortaleza",
+                  "value": {
+                    "email": "gerente.fortaleza@raizes.com",
+                    "senha": "senha123"
+                  }
+                },
+                "totem_fortaleza": {
+                  "summary": "Totem - Fortaleza",
+                  "value": {
+                    "email": "totem.fortaleza@raizes.com",
+                    "senha": "senha123"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "CREDENCIAIS_INVALIDAS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos": {
+      "post": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Registrar um novo pedido",
+        "operationId": "registrar_pedido_pedidos_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedidoRequest"
+              },
+              "examples": {
+                "cliente": {
+                  "summary": "Cliente no app (login cliente@raizes.com)",
+                  "value": {
+                    "canalPedido": "APP",
+                    "unidadeId": "3f2b8c1e-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
+                    "itens": [
+                      {
+                        "produtoUnidadeId": "b0000000-0000-4000-8000-000000000001",
+                        "quantidade": 2,
+                        "observacao": "Sem cebola"
+                      }
+                    ],
+                    "cenarioMock": "APROVAR"
+                  }
+                },
+                "atendente": {
+                  "summary": "Atendente no balcÃ£o (login atendente.recife@raizes.com)",
+                  "value": {
+                    "canalPedido": "BALCAO",
+                    "itens": [
+                      {
+                        "produtoUnidadeId": "b0000000-0000-4000-8000-000000000001",
+                        "quantidade": 2,
+                        "observacao": "Sem cebola"
+                      }
+                    ]
+                  }
+                },
+                "totem": {
+                  "summary": "Totem, cliente anÃ´nimo (login totem.recife@raizes.com)",
+                  "value": {
+                    "canalPedido": "TOTEM",
+                    "itens": [
+                      {
+                        "produtoUnidadeId": "b0000000-0000-4000-8000-000000000001",
+                        "quantidade": 2,
+                        "observacao": "Sem cebola"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "NAO_AUTENTICADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACESSO_NEGADO ou CANAL_NAO_PERMITIDO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NAO_ENCONTRADO (unidade ou produto)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "PRODUTO_INDISPONIVEL ou ESTOQUE_INSUFICIENTE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Listar pedidos",
+        "operationId": "listar_pedidos_pedidos_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "canalPedido",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CanalPedido"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Canalpedido"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/StatusPedido"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaPedidos"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "NAO_AUTENTICADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACESSO_NEGADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}": {
+      "get": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Consultar um pedido",
+        "operationId": "consultar_pedido_pedidos__id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "NAO_AUTENTICADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACESSO_NEGADO (pedido de outro cliente ou de outra unidade)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NAO_ENCONTRADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO (id nÃ£o Ã© um uuid)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/pagamentos": {
+      "get": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Listar as tentativas de pagamento do pedido",
+        "operationId": "listar_pagamentos_pedidos__id__pagamentos_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PagamentoResponse"
+                  },
+                  "title": "Response Listar Pagamentos Pedidos  Id  Pagamentos Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "NAO_AUTENTICADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACESSO_NEGADO (pedido de outro cliente ou de outra unidade)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NAO_ENCONTRADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO (id nÃ£o Ã© um uuid)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Pedir nova tentativa de pagamento",
+        "operationId": "nova_tentativa_pedidos__id__pagamentos_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaTentativaRequest"
+              },
+              "examples": {
+                "aprovar": {
+                  "summary": "Gateway aprova",
+                  "value": {
+                    "cenarioMock": "APROVAR"
+                  }
+                },
+                "recusar": {
+                  "summary": "Gateway recusa",
+                  "value": {
+                    "cenarioMock": "RECUSAR"
+                  }
+                },
+                "sem_resposta": {
+                  "summary": "Gateway nÃ£o responde (expira)",
+                  "value": {
+                    "cenarioMock": "SEM_RESPOSTA"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagamentoResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "NAO_AUTENTICADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACESSO_NEGADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NAO_ENCONTRADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "TRANSICAO_INVALIDA ou LIMITE_TENTATIVAS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/historico": {
+      "get": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Listar o histÃ³rico de status do pedido",
+        "operationId": "listar_historico_pedidos__id__historico_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HistoricoResponse"
+                  },
+                  "title": "Response Listar Historico Pedidos  Id  Historico Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "NAO_AUTENTICADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACESSO_NEGADO (perfil TOTEM, pedido de outro cliente ou de outra unidade)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NAO_ENCONTRADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO (id nÃ£o Ã© um uuid)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/pronto": {
+      "post": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Marcar pedido como pronto",
+        "operationId": "marcar_pronto_pedidos__id__pronto_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "NAO_AUTENTICADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACESSO_NEGADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NAO_ENCONTRADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "TRANSICAO_INVALIDA (pedido nÃ£o estÃ¡ EM_PREPARO)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/retirada": {
+      "post": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Confirmar a retirada do pedido",
+        "operationId": "confirmar_retirada_pedidos__id__retirada_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "NAO_AUTENTICADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACESSO_NEGADO (perfil nÃ£o confirma retiradas deste canal)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NAO_ENCONTRADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "TRANSICAO_INVALIDA (pedido nÃ£o estÃ¡ PRONTO)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/cancelamento": {
+      "post": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Cancelar pedido",
+        "operationId": "cancelar_pedido_pedidos__id__cancelamento_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelamentoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "NAO_AUTENTICADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACESSO_NEGADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NAO_ENCONTRADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "TRANSICAO_INVALIDA (pedido jÃ¡ em preparo, pronto, entregue ou cancelado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO (motivo ausente)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usuarios": {
+      "post": {
+        "tags": [
+          "UsuÃ¡rios"
+        ],
+        "summary": "Cadastrar cliente",
+        "operationId": "cadastrar_cliente_usuarios_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CadastroClienteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "EMAIL_JA_CADASTRADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/unidades": {
+      "get": {
+        "tags": [
+          "Unidades"
+        ],
+        "summary": "Listar unidades da rede RaÃ­zes do Nordeste",
+        "operationId": "listar_unidades_unidades_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UnidadeResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Unidades Unidades Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/unidades/{id}/cardapio": {
+      "get": {
+        "tags": [
+          "Unidades"
+        ],
+        "summary": "Consultar o cardÃ¡pio da unidade",
+        "operationId": "consultar_cardapio_unidades__id__cardapio_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ItemCardapioResponse"
+                  },
+                  "title": "Response Consultar Cardapio Unidades  Id  Cardapio Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NAO_ENCONTRADO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDACAO (id nÃ£o Ã© um uuid)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Verificar se a API e o banco estÃ£o no ar (healthcheck)",
+        "operationId": "verificar_saude_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SERVICO_INDISPONIVEL (banco nÃ£o responde)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CadastroClienteRequest": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 255,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email"
+          },
+          "senha": {
+            "type": "string",
+            "maxLength": 72,
+            "minLength": 8,
+            "title": "Senha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "email",
+          "senha"
+        ],
+        "title": "CadastroClienteRequest",
+        "examples": [
+          {
+            "email": "jose@email.com",
+            "nome": "JosÃ© da Silva",
+            "senha": "minhasenha123"
+          }
+        ]
+      },
+      "CanalPedido": {
+        "type": "string",
+        "enum": [
+          "APP",
+          "BALCAO",
+          "TOTEM",
+          "WEB",
+          "PICKUP"
+        ],
+        "title": "CanalPedido"
+      },
+      "CancelamentoRequest": {
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Motivo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "motivo"
+        ],
+        "title": "CancelamentoRequest",
+        "examples": [
+          {
+            "motivo": "Cliente desistiu do pedido."
+          }
+        ]
+      },
+      "Categoria": {
+        "type": "string",
+        "enum": [
+          "PRATO_PRINCIPAL",
+          "LANCHE",
+          "BEBIDA",
+          "SOBREMESA"
+        ],
+        "title": "Categoria"
+      },
+      "CenarioMock": {
+        "type": "string",
+        "enum": [
+          "APROVAR",
+          "RECUSAR",
+          "SEM_RESPOSTA"
+        ],
+        "title": "CenarioMock"
+      },
+      "DetalheErro": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "issue": {
+            "type": "string",
+            "title": "Issue"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "issue"
+        ],
+        "title": "DetalheErro"
+      },
+      "ErroResponse": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/DetalheErro"
+            },
+            "type": "array",
+            "title": "Details",
+            "default": []
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "requestId": {
+            "type": "string",
+            "title": "Requestid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error",
+          "message",
+          "timestamp",
+          "path",
+          "requestId"
+        ],
+        "title": "ErroResponse"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "banco": {
+            "type": "string",
+            "title": "Banco"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "banco",
+          "timestamp"
+        ],
+        "title": "HealthResponse"
+      },
+      "HistoricoResponse": {
+        "properties": {
+          "statusAnterior": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StatusPedido"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "statusNovo": {
+            "$ref": "#/components/schemas/StatusPedido"
+          },
+          "dataHora": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Datahora"
+          },
+          "tipoResponsavel": {
+            "$ref": "#/components/schemas/TipoResponsavel"
+          },
+          "nomeResponsavel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nomeresponsavel"
+          },
+          "motivo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "statusNovo",
+          "dataHora",
+          "tipoResponsavel"
+        ],
+        "title": "HistoricoResponse",
+        "examples": [
+          {
+            "dataHora": "2026-10-31T14:32:10Z",
+            "motivo": "Desisti do pedido.",
+            "nomeResponsavel": "Maria Cliente",
+            "statusAnterior": "PAGAMENTO_RECUSADO",
+            "statusNovo": "PEDIDO_CANCELADO",
+            "tipoResponsavel": "CLIENTE"
+          }
+        ]
+      },
+      "ItemCardapioResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "descricao": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descricao"
+          },
+          "categoria": {
+            "$ref": "#/components/schemas/Categoria"
+          },
+          "preco": {
+            "type": "string",
+            "title": "Preco"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "categoria",
+          "preco"
+        ],
+        "title": "ItemCardapioResponse"
+      },
+      "ItemPedidoRequest": {
+        "properties": {
+          "produtoUnidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Produtounidadeid"
+          },
+          "quantidade": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Quantidade"
+          },
+          "observacao": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observacao"
+          }
+        },
+        "type": "object",
+        "required": [
+          "produtoUnidadeId",
+          "quantidade"
+        ],
+        "title": "ItemPedidoRequest"
+      },
+      "ItemPedidoResponse": {
+        "properties": {
+          "produtoUnidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Produtounidadeid"
+          },
+          "nomeProduto": {
+            "type": "string",
+            "title": "Nomeproduto"
+          },
+          "precoUnitario": {
+            "type": "string",
+            "title": "Precounitario"
+          },
+          "quantidade": {
+            "type": "integer",
+            "title": "Quantidade"
+          },
+          "observacao": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observacao"
+          }
+        },
+        "type": "object",
+        "required": [
+          "produtoUnidadeId",
+          "nomeProduto",
+          "precoUnitario",
+          "quantidade"
+        ],
+        "title": "ItemPedidoResponse"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "senha": {
+            "type": "string",
+            "maxLength": 72,
+            "title": "Senha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "senha"
+        ],
+        "title": "LoginRequest"
+      },
+      "NovaTentativaRequest": {
+        "properties": {
+          "cenarioMock": {
+            "$ref": "#/components/schemas/CenarioMock",
+            "default": "APROVAR"
+          }
+        },
+        "type": "object",
+        "title": "NovaTentativaRequest"
+      },
+      "PagamentoResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "valor": {
+            "type": "string",
+            "title": "Valor"
+          },
+          "resultado": {
+            "$ref": "#/components/schemas/ResultadoPagamento"
+          },
+          "motivoRecusa": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivorecusa"
+          },
+          "dataHoraResposta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datahoraresposta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "valor",
+          "resultado"
+        ],
+        "title": "PagamentoResponse",
+        "examples": [
+          {
+            "dataHoraResposta": "2026-10-31T14:30:05Z",
+            "id": "5d1e7a3c-9b2f-4c8e-a1d6-3f0b9c2e7a41",
+            "motivoRecusa": "Pagamento recusado pela operadora.",
+            "resultado": "RECUSADO",
+            "valor": "30.00"
+          }
+        ]
+      },
+      "PaginaPedidos": {
+        "properties": {
+          "pedidos": {
+            "items": {
+              "$ref": "#/components/schemas/PedidoResponse"
+            },
+            "type": "array",
+            "title": "Pedidos"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pedidos",
+          "page",
+          "limit",
+          "total"
+        ],
+        "title": "PaginaPedidos"
+      },
+      "PedidoRequest": {
+        "properties": {
+          "canalPedido": {
+            "$ref": "#/components/schemas/CanalPedido"
+          },
+          "unidadeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unidadeid"
+          },
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/ItemPedidoRequest"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Itens"
+          },
+          "cenarioMock": {
+            "$ref": "#/components/schemas/CenarioMock",
+            "default": "APROVAR"
+          }
+        },
+        "type": "object",
+        "required": [
+          "canalPedido",
+          "itens"
+        ],
+        "title": "PedidoRequest"
+      },
+      "PedidoResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StatusPedido"
+          },
+          "canalPedido": {
+            "$ref": "#/components/schemas/CanalPedido"
+          },
+          "unidade": {
+            "$ref": "#/components/schemas/UnidadeResumo"
+          },
+          "dataHora": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Datahora"
+          },
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/ItemPedidoResponse"
+            },
+            "type": "array",
+            "title": "Itens"
+          },
+          "total": {
+            "type": "string",
+            "title": "Total"
+          },
+          "senha": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Senha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "canalPedido",
+          "unidade",
+          "dataHora",
+          "itens",
+          "total"
+        ],
+        "title": "PedidoResponse",
+        "examples": [
+          {
+            "canalPedido": "APP",
+            "dataHora": "2026-10-31T14:30:00Z",
+            "id": "b8340e16-4ca9-4144-a1e1-155512ea2ce7",
+            "itens": [
+              {
+                "nomeProduto": "Cuscuz com charque",
+                "observacao": "Sem cebola",
+                "precoUnitario": "15.00",
+                "produtoUnidadeId": "b0000000-0000-4000-8000-000000000001",
+                "quantidade": 2
+              }
+            ],
+            "status": "AGUARDANDO_PAGAMENTO",
+            "total": "30.00",
+            "unidade": {
+              "id": "3f2b8c1e-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
+              "nome": "Recife"
+            }
+          }
+        ]
+      },
+      "Perfil": {
+        "type": "string",
+        "enum": [
+          "CLIENTE",
+          "ATENDENTE",
+          "COZINHA",
+          "GERENTE",
+          "ADMIN",
+          "TOTEM"
+        ],
+        "title": "Perfil"
+      },
+      "ResultadoPagamento": {
+        "type": "string",
+        "enum": [
+          "PENDENTE",
+          "APROVADO",
+          "RECUSADO",
+          "EXPIRADO"
+        ],
+        "title": "ResultadoPagamento"
+      },
+      "StatusPedido": {
+        "type": "string",
+        "enum": [
+          "AGUARDANDO_PAGAMENTO",
+          "PAGAMENTO_RECUSADO",
+          "PAGAMENTO_EXPIRADO",
+          "EM_PREPARO",
+          "PRONTO",
+          "ENTREGUE",
+          "PEDIDO_CANCELADO"
+        ],
+        "title": "StatusPedido"
+      },
+      "TipoResponsavel": {
+        "type": "string",
+        "enum": [
+          "CLIENTE",
+          "ATENDENTE",
+          "COZINHA",
+          "GERENTE",
+          "ADMIN",
+          "SISTEMA"
+        ],
+        "title": "TipoResponsavel"
+      },
+      "TokenResponse": {
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "title": "Accesstoken"
+          },
+          "tokenType": {
+            "type": "string",
+            "title": "Tokentype",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "accessToken"
+        ],
+        "title": "TokenResponse"
+      },
+      "UnidadeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "endereco": {
+            "type": "string",
+            "title": "Endereco"
+          },
+          "cidade": {
+            "type": "string",
+            "title": "Cidade"
+          },
+          "uf": {
+            "type": "string",
+            "title": "Uf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "endereco",
+          "cidade",
+          "uf"
+        ],
+        "title": "UnidadeResponse"
+      },
+      "UnidadeResumo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome"
+        ],
+        "title": "UnidadeResumo"
+      },
+      "UsuarioResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "perfil": {
+            "$ref": "#/components/schemas/Perfil"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "email",
+          "perfil"
+        ],
+        "title": "UsuarioResponse"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

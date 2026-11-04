@@ -12,6 +12,8 @@ retirada, passando pelo preparo.
 ## Links
 
 - **Swagger** (com a API rodando): http://127.0.0.1:8000/docs
+- **Swagger público** (só consulta, sem a API rodando): https://editor.swagger.io/?url=https://raw.githubusercontent.com/elvasthaisa/projeto-backend-raizes-do-nordeste/main/docs/openapi.json
+- **Contrato OpenAPI:** [`docs/openapi.json`](docs/openapi.json), gerado pelo FastAPI a partir do código
 - **Coleção do Postman:** [`api-raizes-do-nordeste/postman/raizes-do-nordeste.postman_collection.json`](api-raizes-do-nordeste/postman/raizes-do-nordeste.postman_collection.json)
 
 ## Tecnologias
